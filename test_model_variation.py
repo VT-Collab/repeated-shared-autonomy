@@ -5,7 +5,7 @@ import math
 import numpy as np
 import time
 import pickle
-from train_model import CAE
+from train_model_variation import CAE
 import torch
 import copy
 
@@ -19,8 +19,8 @@ class Model(object):
         self.model.eval
 
     def encoder(self, c):
-        z_tensor = self.model.encoder(torch.FloatTensor(c))
-        return z_tensor.tolist()
+        z_mean, z_log_var = self.model.encoder(torch.FloatTensor(c))
+        return z_mean.tolist(), torch.exp(0.5*z_log_var).tolist()
 
     def decoder(self, z, s):
         z_tensor = torch.FloatTensor(z + s)
@@ -90,7 +90,7 @@ class Player(pygame.sprite.Sprite):
 
 def main():
 
-    modelname = "models/cae_model"
+    modelname = "models/vae_model"
 
     clock = pygame.time.Clock()
     pygame.init()
@@ -130,15 +130,17 @@ def main():
         q = np.asarray([player.x, player.y])
         s = obs_position + q.tolist()
         c = start_state + q.tolist()
+        z_mean, z_std = model.encoder(c)
+        z_mean = z_mean[0]
+        z_std = z_std[0]
         actions = np.zeros((100, 2))
-        zs = []
         for idx in range(100):
-            z = model.encoder(c)
-            a_robot = model.decoder(z, s)
-            zs += z
+            z = z_mean + np.random.normal() * z_std
+            a_robot = model.decoder([z], s)
             actions[idx,:] = a_robot
         a_robot = np.mean(actions, axis=0)
-        a_var = np.std(actions, axis=0)
+        print(np.std(actions))
+
 
         action, start, stop = joystick.input()
         if stop:
