@@ -17,6 +17,12 @@ class Model(object):
         model_dict = torch.load(modelname, map_location='cpu')
         self.model.load_state_dict(model_dict)
         self.model.eval
+        self.enable_dropout()
+
+    def enable_dropout(self):
+        for m in self.model.modules():
+            if m.__class__.__name__.startswith('Dropout'):
+                m.train()
 
     def encoder(self, c):
         z_mean, z_log_var = self.model.encoder(torch.FloatTensor(c))

@@ -6,8 +6,8 @@ import pickle
 import random
 import numpy as np
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
+# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = "cpu"
 
 # collect dataset
 class MotionData(Dataset):
@@ -40,13 +40,13 @@ class CAE(nn.Module):
         self.enc = nn.Sequential(
             nn.Linear(10, 10),
             nn.Tanh(),
-            # nn.Dropout(0.1),
+            nn.Dropout(0.1),
             nn.Linear(10, 10),
             nn.Tanh(),
-            # nn.Dropout(0.1),
+            nn.Dropout(0.1),
             nn.Linear(10, 10),
             nn.Tanh(),
-            # nn.Dropout(0.1)
+            nn.Dropout(0.1)
         )
         self.fc_mean = nn.Linear(10, 1)
         self.fc_var = nn.Linear(10, 1)
@@ -55,9 +55,10 @@ class CAE(nn.Module):
         self.dec = nn.Sequential(
             nn.Linear(9, 10),
             nn.Tanh(),
-            # nn.Dropout(0.1),
+            nn.Dropout(0.1),
             nn.Linear(10, 10),
             nn.Tanh(),
+            # nn.Dropout(0.1),
             nn.Linear(10, 2)
         )
 
