@@ -85,7 +85,13 @@ def main():
     postition_blue = np.random.random(2)
     postition_green = np.random.random(2)
     postition_gray = np.random.random(2)
+    # position_player = [0.5,0.5]
+    # postition_blue = [0.1, np.random.random()]
+    # postition_green = [0.9, np.random.random()]
+    # postition_gray = [0.5, 0.1]
     obs_position = postition_blue.tolist() + postition_green.tolist() + postition_gray.tolist()
+    # obs_position = postition_blue + postition_green + postition_gray
+
 
     player = Player(position_player)
     blue = Object(postition_blue, [0, 0, 255])
