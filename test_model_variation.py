@@ -106,11 +106,17 @@ def main():
     model = Model(modelname)
 
     world = pygame.display.set_mode([700,700])
-    position_player = np.random.random(2)
-    postition_blue = np.random.random(2)
-    postition_green = np.random.random(2)
-    postition_gray = np.random.random(2)
-    obs_position = postition_blue.tolist() + postition_green.tolist() + postition_gray.tolist()
+    # position_player = np.random.random(2)
+    # postition_blue = np.random.random(2)
+    # postition_green = np.random.random(2)
+    # postition_gray = np.random.random(2)
+    position_player = [0.5,0.5]
+    postition_blue = [0.1, np.random.random()]
+    postition_green = [0.9, np.random.random()]
+    postition_gray = [0.5, 0.1]
+    # obs_position = postition_blue.tolist() + postition_green.tolist() + postition_gray.tolist()
+    obs_position = postition_blue + postition_green + postition_gray
+
 
     player = Player(position_player)
     blue = Object(postition_blue, [0, 0, 255])
@@ -128,7 +134,8 @@ def main():
     pygame.display.flip()
     clock.tick(fps)
 
-    start_state = obs_position + position_player.tolist()
+    # start_state = obs_position + position_player.tolist()
+    start_state = obs_position + position_player
     startt = time.time()
 
     while True:
@@ -139,20 +146,23 @@ def main():
         z_mean, z_std = model.encoder(c)
         z_mean = z_mean[0]
         z_std = z_std[0]
+        # print("Z_mean: ",z_mean)
+        # print("Z_std: ",z_std)
         actions = np.zeros((100, 2))
         for idx in range(100):
             z = z_mean + np.random.normal() * z_std
             a_robot = model.decoder([z], s)
             actions[idx,:] = a_robot
         a_robot = np.mean(actions, axis=0)
-        print(np.std(actions))
+        print("action std: ", np.std(actions))
 
+        beta = 100/np.std(actions)
 
         action, start, stop = joystick.input()
         if stop:
             pygame.quit(); sys.exit()
 
-        q += np.asarray(a_robot) * 0.01 + np.asarray(action) * 0.01
+        q += np.asarray(a_robot) * 0.003 + np.asarray(action) * 0.007
 
         # dynamics
         player.update(q)
