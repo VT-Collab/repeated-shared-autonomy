@@ -6,7 +6,8 @@ import pickle
 import random
 import numpy as np
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = "cpu"
 
 
 # collect dataset
@@ -40,10 +41,10 @@ class CAE(nn.Module):
             nn.Linear(10, 10),
             nn.Tanh(),
             nn.Dropout(0.1),
-            nn.Linear(10, 10),
+            nn.Linear(10, 12),
             nn.Tanh(),
             nn.Dropout(0.1),
-            nn.Linear(10, 10),
+            nn.Linear(12, 10),
             nn.Tanh(),
             nn.Dropout(0.1),
             nn.Linear(10, 1)
@@ -51,10 +52,10 @@ class CAE(nn.Module):
 
         # Decoder
         self.dec = nn.Sequential(
-            nn.Linear(9, 10),
+            nn.Linear(9, 12),
             nn.Tanh(),
             nn.Dropout(0.1),
-            nn.Linear(10, 10),
+            nn.Linear(12, 10),
             nn.Tanh(),
             nn.Linear(10, 2)
         )
