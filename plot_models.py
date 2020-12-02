@@ -101,7 +101,7 @@ def main():
 
     modelname = "models/vae_model_b_0001"
     model_1 = Model_VAE(modelname)
-    model_2 = Model_CAE("models/cae_model")
+    model_2 = Model_VAE("models/vae_model_data_50")
 
     position_player = [0.5,0.5]
     position_blue = [0.2, np.random.random()]
@@ -128,16 +128,19 @@ def main():
             z_mean_1, z_std_1 = model_1.encoder(c)
             z_mean_1 = z_mean_1[0]
             z_std_1 = z_std_1[0]
-            z_2 = model_2.encoder(c)
+            z_mean_2, z_std_2 = model_2.encoder(c)
+            z_mean_2 = z_mean_2[0]
+            z_std_2 = z_std_2[0]
 
             actions_1 = np.zeros((100, 2))
             actions_2 = np.zeros((100, 2))
             
             for idx in range(100):
                 z_1 = z_mean_1 + np.random.normal() * z_std_1
-                
+                z_2 = z_mean_2 + np.random.normal() * z_std_2
+
                 a_robot_1 = model_1.decoder([z_1], s)
-                a_robot_2 = model_2.decoder(z_2, s)
+                a_robot_2 = model_2.decoder([z_2], s)
                 
                 actions_1[idx,:] = a_robot_1
                 actions_2[idx,:] = a_robot_2
@@ -158,9 +161,9 @@ def main():
         ax.plot(position_gray[0]*N, position_gray[1]*N, 'ko', markersize=14)
         ax.plot(position_player[0]*N, position_player[1]*N, 'mo', markersize=14) 
     axs[0].imshow(heatmap_1.T, cmap='hot', interpolation='nearest')
-    axs[0].set_title('VAE')
+    axs[0].set_title('100 Samples')
     axs[1].imshow(heatmap_2.T, cmap='hot', interpolation='nearest')
-    axs[1].set_title('CAE')
+    axs[1].set_title('50 Samples')
 
     plt.tight_layout()
     plt.show()
