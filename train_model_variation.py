@@ -34,7 +34,7 @@ class CAE(nn.Module):
         super(CAE, self).__init__()
 
         self.loss_func = nn.MSELoss()
-        self.BETA = 0.0001
+        self.BETA = 0.001
 
         # Encoder
         self.enc = nn.Sequential(
@@ -96,7 +96,7 @@ def main():
 
     model = CAE()
     dataname = 'data/dataset.pkl'
-    savename = "models/vae_model_b_0001"
+    savename = "models/vae_model_d_01"
 
     EPOCH = 2000
     BATCH_SIZE_TRAIN = 400
