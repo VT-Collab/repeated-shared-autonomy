@@ -96,7 +96,7 @@ class Player(pygame.sprite.Sprite):
 
 def main():
 
-    name = "models/vae_model_"
+    name = "models/vae_ensemble_"
 
     clock = pygame.time.Clock()
     pygame.init()
@@ -105,7 +105,7 @@ def main():
     joystick = Joystick()
     # model = Model(modelname)
     models = []
-    for i in range(5):
+    for i in range(1,11):
         num = i+1
         modelname = name + str(num)
         print(modelname)
@@ -156,7 +156,7 @@ def main():
         # print("Z_mean: ",z_mean)
         # print("Z_std: ",z_std)
         actions = np.zeros((5, 2))
-        for idx in range(5):
+        for idx in range(1,11):
             model = models[idx]
             z_mean, z_std = model.encoder(c)
             z = z_mean[0] #+ np.random.normal() * z_std
