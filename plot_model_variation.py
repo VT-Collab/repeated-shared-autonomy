@@ -116,16 +116,16 @@ def main():
     
 
     row = 0
-    N = 30
-    heatmap_1 = np.zeros((N, N))
-    heatmap_2 = np.zeros((N, N))
-    heatmap_3 = np.zeros((N, N))
+    scale = 30
+    heatmap_1 = np.zeros((scale, scale))
+    heatmap_2 = np.zeros((scale, scale))
+    heatmap_3 = np.zeros((scale, scale))
 
-    for i in range(0,N):
+    for i in range(0,scale):
         col = 0
-        for j in range(0,N):
-            x = i/float(N)
-            y = j/float(N)
+        for j in range(0,scale):
+            x = i/float(scale)
+            y = j/float(scale)
             q = np.asarray([x, y])
             
             s_1 = obs_positions[0] + q.tolist()
@@ -172,10 +172,10 @@ def main():
     for ax in axs:
         position_green = positions_green[i]
         position_blue = positions_blue[i]
-        ax.plot(position_blue[0]*N, position_blue[1]*N, 'bo', markersize=14)
-        ax.plot(position_green[0]*N, position_green[1]*N, 'go', markersize=14)
-        ax.plot(position_gray[0]*N, position_gray[1]*N, 'ko', markersize=14)
-        ax.plot(position_player[0]*N, position_player[1]*N, 'mo', markersize=14) 
+        ax.plot(position_blue[0]*scale, position_blue[1]*scale, 'bo', markersize=14)
+        ax.plot(position_green[0]*scale position_green[1]*scale, 'go', markersize=14)
+        ax.plot(position_gray[0]*scale, position_gray[1]*scale, 'ko', markersize=14)
+        ax.plot(position_player[0]*scale, position_player[1]*scale, 'mo', markersize=14) 
         i+= 1
     axs[0].imshow(heatmap_1.T, cmap='hot', interpolation='nearest')
     # axs[0].set_title('BETA = 0.001')

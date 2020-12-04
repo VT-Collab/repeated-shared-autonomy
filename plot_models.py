@@ -101,7 +101,16 @@ def main():
 
     modelname = "models/vae_model_b_0001"
     model_1 = Model_VAE(modelname)
-    model_2 = Model_VAE("models/vae_model_data_50")
+    model_2 = Model_CAE("models/cae_model")
+    models_3 = []
+    name = "models/vae_ensemble_"
+    N = 10
+    for i in range(N):
+        num = i+1
+        modelname = name + str(num)
+        print(modelname)
+        model = Model_VAE(modelname)
+        models_3.append(model)
 
     position_player = [0.5,0.5]
     position_blue = [0.2, np.random.random()]
@@ -111,16 +120,16 @@ def main():
     start_state = obs_position + position_player
 
     row = 0
-    N = 30
-    heatmap_1 = np.zeros((N, N))
-    heatmap_2 = np.zeros((N, N))
-    heatmap_3 = np.zeros((N, N))
+    scale = 30
+    heatmap_1 = np.zeros((scale, scale))
+    heatmap_2 = np.zeros((scale, scale))
+    heatmap_3 = np.zeros((scale, scale))
 
-    for i in range(0,N):
+    for i in range(0,scale):
         col = 0
-        for j in range(0,N):
-            x = i/float(N)
-            y = j/float(N)
+        for j in range(0,scale):
+            x = i/float(scale)
+            y = j/float(scale)
             q = np.asarray([x, y])
             s = obs_position + q.tolist()
             c = start_state + q.tolist()
@@ -128,43 +137,61 @@ def main():
             z_mean_1, z_std_1 = model_1.encoder(c)
             z_mean_1 = z_mean_1[0]
             z_std_1 = z_std_1[0]
-            z_mean_2, z_std_2 = model_2.encoder(c)
-            z_mean_2 = z_mean_2[0]
-            z_std_2 = z_std_2[0]
+            z_2 = model_2.encoder(c)
+            # z_mean_2 = z_mean_2[0]
+            # z_std_2 = z_std_2[0]
 
             actions_1 = np.zeros((100, 2))
             actions_2 = np.zeros((100, 2))
-            
+            actions_3 = np.zeros((N, 2))
+
             for idx in range(100):
                 z_1 = z_mean_1 + np.random.normal() * z_std_1
-                z_2 = z_mean_2 + np.random.normal() * z_std_2
+                # z_2 = z_mean_2 + np.random.normal() * z_std_2
 
                 a_robot_1 = model_1.decoder([z_1], s)
-                a_robot_2 = model_2.decoder([z_2], s)
+                a_robot_2 = model_2.decoder(z_2, s)
                 
                 actions_1[idx,:] = a_robot_1
                 actions_2[idx,:] = a_robot_2
+
+                if idx < N:
+                    model = models_3[idx]
+                    z_mean_3, z_std_3 = model.encoder(c)
+                    z_mean_3 = z_mean_3[0]
+                    z_std_3 = z_std_3[0]
+
+                    z_3 = z_mean_3 + np.random.normal() * z_std_3
+
+                    a_robot_3 = model.decoder([z_3], s)
+
+                    actions_3[idx,:] = a_robot_3
                 
             # a_robot = np.mean(actions, axis=0)
             heatmap_1[row,col] = np.std(actions_1)
             heatmap_2[row,col] = np.std(actions_2)
+            heatmap_3[row,col] = np.std(actions_3)
             
             # print(np.std(actions))
             col += 1
             # print(col)
         row += 1
     # print(heatmap)
-    fig, axs = plt.subplots(1, 2, figsize=(6, 3), sharey=True)
+    fig, axs = plt.subplots(1, 3, figsize=(9, 3), sharey=True)
+    i = 0
     for ax in axs:
-        ax.plot(position_blue[0]*N, position_blue[1]*N, 'bo', markersize=14)
-        ax.plot(position_green[0]*N, position_green[1]*N, 'go', markersize=14)
-        ax.plot(position_gray[0]*N, position_gray[1]*N, 'ko', markersize=14)
-        ax.plot(position_player[0]*N, position_player[1]*N, 'mo', markersize=14) 
+        ax.plot(position_blue[0]*scale, position_blue[1]*scale, 'bo', markersize=14)
+        ax.plot(position_green[0]*scale, position_green[1]*scale, 'go', markersize=14)
+        ax.plot(position_gray[0]*scale, position_gray[1]*scale, 'ko', markersize=14)
+        ax.plot(position_player[0]*scale, position_player[1]*scale, 'mo', markersize=14) 
+        i+= 1
     axs[0].imshow(heatmap_1.T, cmap='hot', interpolation='nearest')
-    axs[0].set_title('100 Samples')
+    axs[0].set_title('Dropout')
     axs[1].imshow(heatmap_2.T, cmap='hot', interpolation='nearest')
-    axs[1].set_title('50 Samples')
-
+    axs[1].set_title('CAE')
+    axs[2].imshow(heatmap_3.T, cmap='hot', interpolation='nearest')
+    axs[2].set_title('Ensemble')
+    # plt.suptitle("Ensemble 1")
     plt.tight_layout()
     plt.show()
 

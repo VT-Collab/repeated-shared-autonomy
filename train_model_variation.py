@@ -96,7 +96,7 @@ def main():
 
     model = CAE()
     dataname = 'data/dataset.pkl'
-    savename = "models/vae_model_data_50"
+    savename = "models/vae_ensemble_10"
 
     EPOCH = 2000
     BATCH_SIZE_TRAIN = 400

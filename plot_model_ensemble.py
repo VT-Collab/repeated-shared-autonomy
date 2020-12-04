@@ -95,55 +95,104 @@ class Player(pygame.sprite.Sprite):
 
 def main():
 
-    name = "models/vae_model_"
+    name = "models/vae_ensemble_"
     models = []
-    for i in range(5):
+    N = 10
+    for i in range(N):
         num = i+1
         modelname = name + str(num)
         print(modelname)
         model = Model(modelname)
         models.append(model)
     position_player = [0.5,0.5]
-    position_blue = [np.random.random(), np.random.random()]
-    position_green = [np.random.random(), np.random.random()]
     position_gray = [0.5, 0.1]
-    obs_position = position_blue + position_green + position_gray
-    start_state = obs_position + position_player
+    positions_blue = []
+    positions_green = []
+    obs_positions = []
+    start_states = []
+    for i in range(3):
+        position_blue = [np.random.random(), np.random.random()]
+        position_green = [np.random.random(), np.random.random()]
+        positions_blue.append(position_blue)
+        positions_green.append(position_green)
+        obs_position = position_blue + position_green + position_gray
+        start_state = obs_position + position_player
+        obs_positions.append(obs_position)
+        start_states.append(start_state)
+
+    
+    # heatmap = np.zeros((50, 50))
+    scale = 30
+    heatmap_1 = np.zeros((scale, scale))
+    heatmap_2 = np.zeros((scale, scale))
+    heatmap_3 = np.zeros((scale, scale))
 
     row = 0
-    heatmap = np.zeros((50, 50))
-    for i in range(0,100,2):
+    for i in range(0,scale):
         col = 0
-        for j in range(0,100,2):
-            x = i/100.0
-            y = j/100.0
+        for j in range(0,scale):
+            x = i/float(scale)
+            y = j/float(scale)
             q = np.asarray([x, y])
-            s = obs_position + q.tolist()
-            c = start_state + q.tolist()
-            z_mean, z_std = model.encoder(c)
-            z_mean = z_mean[0]
-            z_std = z_std[0]
-            # print("Z_mean: ",z_mean)
-            # print("Z_std: ",z_std)
-            actions = np.zeros((5, 2))
-            for idx in range(5):
+            
+            s_1 = obs_positions[0] + q.tolist()
+            c_1 = start_states[0] + q.tolist()
+            s_2 = obs_positions[1] + q.tolist()
+            c_2 = start_states[1] + q.tolist()
+            s_3 = obs_positions[2] + q.tolist()
+            c_3 = start_states[2] + q.tolist()
+
+            actions_1 = np.zeros((N, 2))
+            actions_2 = np.zeros((N, 2))
+            actions_3 = np.zeros((N, 2))
+            for idx in range(N):
                 model = models[idx]
-                z_mean, z_std = model.encoder(c)
-                z = z_mean[0] #+ np.random.normal() * z_std
-                a_robot = model.decoder([z], s)
-                actions[idx,:] = a_robot
-            a_robot = np.mean(actions, axis=0)
-            heatmap[row,col] = np.std(actions)
+                z_mean_1, z_std_1 = model.encoder(c_1)
+                z_mean_1 = z_mean_1[0]
+                z_std_1 = z_std_1[0]
+                z_mean_2, z_std_2 = model.encoder(c_2)
+                z_mean_2 = z_mean_2[0]
+                z_std_2 = z_std_2[0]
+                z_mean_3, z_std_3 = model.encoder(c_3)
+                z_mean_3 = z_mean_3[0]
+                z_std_3 = z_std_3[0]
+
+                z_1 = z_mean_1 + np.random.normal() * z_std_1
+                z_2 = z_mean_2 + np.random.normal() * z_std_2
+                z_3 = z_mean_3 + np.random.normal() * z_std_3
+                a_robot_1 = model.decoder([z_1], s_1)
+                a_robot_2 = model.decoder([z_2], s_2)
+                a_robot_3 = model.decoder([z_3], s_3)
+                actions_1[idx,:] = a_robot_1
+                actions_2[idx,:] = a_robot_2
+                actions_3[idx,:] = a_robot_3
+            # a_robot = np.mean(actions, axis=0)
+            heatmap_1[row,col] = np.std(actions_1)
+            heatmap_2[row,col] = np.std(actions_2)
+            heatmap_3[row,col] = np.std(actions_3)
             # print(np.std(actions))
             col += 1
             # print(col)
         row += 1
     # print(heatmap)
-    fig = plt.figure()
-    plt.plot(position_blue[0]*50, position_blue[1]*50, 'bo')
-    plt.plot(position_green[0]*50, position_green[1]*50, 'go')
-    plt.plot(position_gray[0]*50, position_gray[1]*50, 'ko') 
-    plt.imshow(heatmap.T, cmap='hot', interpolation='nearest')
+    fig, axs = plt.subplots(1, 3, figsize=(9, 3), sharey=True)
+    i = 0
+    for ax in axs:
+        position_green = positions_green[i]
+        position_blue = positions_blue[i]
+        ax.plot(position_blue[0]*scale, position_blue[1]*scale, 'bo', markersize=14)
+        ax.plot(position_green[0]*scale, position_green[1]*scale, 'go', markersize=14)
+        ax.plot(position_gray[0]*scale, position_gray[1]*scale, 'ko', markersize=14)
+        ax.plot(position_player[0]*scale, position_player[1]*scale, 'mo', markersize=14) 
+        i+= 1
+    axs[0].imshow(heatmap_1.T, cmap='hot', interpolation='nearest')
+    # axs[0].set_title('BETA = 0.001')
+    axs[1].imshow(heatmap_2.T, cmap='hot', interpolation='nearest')
+    # axs[1].set_title('BETA = 0.0001')
+    axs[2].imshow(heatmap_3.T, cmap='hot', interpolation='nearest')
+    # axs[2].set_title('BETA = 0.000001')
+    plt.suptitle("Ensemble 1")
+    plt.tight_layout()
     plt.show()
 
 
