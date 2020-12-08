@@ -13,7 +13,10 @@ device = "cpu"
 class MotionData(Dataset):
 
     def __init__(self, filename):
-        self.data = pickle.load(open(filename, "rb"))
+        self.all_data = pickle.load(open(filename, "rb"))
+        self.max_len = len(self.all_data)
+        self.train_len = int(0.75 * self.max_len)
+        self.data = random.sample(self.all_data, self.train_len)
 
     def __len__(self):
         return len(self.data)
@@ -40,13 +43,13 @@ class CAE(nn.Module):
         self.enc = nn.Sequential(
             nn.Linear(10, 10),
             nn.Tanh(),
-            nn.Dropout(0.1),
+            # nn.Dropout(0.1),
             nn.Linear(10, 12),
             nn.Tanh(),
-            nn.Dropout(0.1),
+            # nn.Dropout(0.1),
             nn.Linear(12, 10),
             nn.Tanh(),
-            nn.Dropout(0.1)
+            # nn.Dropout(0.1)
         )
         self.fc_mean = nn.Linear(10, 1)
         self.fc_var = nn.Linear(10, 1)
@@ -55,7 +58,7 @@ class CAE(nn.Module):
         self.dec = nn.Sequential(
             nn.Linear(9, 12),
             nn.Tanh(),
-            nn.Dropout(0.1),
+            # nn.Dropout(0.1),
             nn.Linear(12, 10),
             nn.Tanh(),
             # nn.Dropout(0.1),
@@ -92,11 +95,13 @@ class CAE(nn.Module):
         return rce + self.BETA * kld
 
 # train cAE
-def main():
+def main(num):
 
     model = CAE()
+    model = model.to(device)
     dataname = 'data/dataset.pkl'
-    savename = "models/vae_ensemble_1"
+    savename = "models/vae_random_75_" + str(num)
+    print(savename)
 
     EPOCH = 2000
     BATCH_SIZE_TRAIN = 400
@@ -122,4 +127,5 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    for i in range(1,11):
+        main(i)
