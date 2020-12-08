@@ -173,7 +173,7 @@ def main():
         position_green = positions_green[i]
         position_blue = positions_blue[i]
         ax.plot(position_blue[0]*scale, position_blue[1]*scale, 'bo', markersize=14)
-        ax.plot(position_green[0]*scale position_green[1]*scale, 'go', markersize=14)
+        ax.plot(position_green[0]*scale, position_green[1]*scale, 'go', markersize=14)
         ax.plot(position_gray[0]*scale, position_gray[1]*scale, 'ko', markersize=14)
         ax.plot(position_player[0]*scale, position_player[1]*scale, 'mo', markersize=14) 
         i+= 1
