@@ -102,15 +102,15 @@ def main():
     modelname = "models/vae_model_b_0001"
     model_1 = Model_VAE(modelname)
     model_2 = Model_CAE("models/cae_model")
-    models_3 = []
-    name = "models/vae_ensemble_"
+    # models_3 = []
+    # name = "models/vae_ensemble_"
     N = 10
-    for i in range(N):
-        num = i+1
-        modelname = name + str(num)
-        print(modelname)
-        model = Model_VAE(modelname)
-        models_3.append(model)
+    # for i in range(N):
+    #     num = i+1
+    #     modelname = name + str(num)
+    #     print(modelname)
+    #     model = Model_VAE(modelname)
+    #     models_3.append(model)
 
     position_player = [0.5,0.5]
     position_blue = [0.2, np.random.random()]
@@ -155,17 +155,17 @@ def main():
                 actions_1[idx,:] = a_robot_1
                 actions_2[idx,:] = a_robot_2
 
-                if idx < N:
-                    model = models_3[idx]
-                    z_mean_3, z_std_3 = model.encoder(c)
-                    z_mean_3 = z_mean_3[0]
-                    z_std_3 = z_std_3[0]
+                # if idx < N:
+                #     model = models_3[idx]
+                #     z_mean_3, z_std_3 = model.encoder(c)
+                #     z_mean_3 = z_mean_3[0]
+                #     z_std_3 = z_std_3[0]
 
-                    z_3 = z_mean_3 + np.random.normal() * z_std_3
+                #     z_3 = z_mean_3 + np.random.normal() * z_std_3
 
-                    a_robot_3 = model.decoder([z_3], s)
+                #     a_robot_3 = model.decoder([z_3], s)
 
-                    actions_3[idx,:] = a_robot_3
+                #     actions_3[idx,:] = a_robot_3
                 
             # a_robot = np.mean(actions, axis=0)
             heatmap_1[row,col] = np.std(actions_1)
@@ -177,7 +177,7 @@ def main():
             # print(col)
         row += 1
     # print(heatmap)
-    fig, axs = plt.subplots(1, 3, figsize=(9, 3), sharey=True)
+    fig, axs = plt.subplots(1, 2, figsize=(9, 3), sharey=True)
     i = 0
     for ax in axs:
         ax.plot(position_blue[0]*scale, position_blue[1]*scale, 'bo', markersize=14)
@@ -189,8 +189,8 @@ def main():
     axs[0].set_title('Dropout')
     axs[1].imshow(heatmap_2.T, cmap='hot', interpolation='nearest')
     axs[1].set_title('CAE')
-    axs[2].imshow(heatmap_3.T, cmap='hot', interpolation='nearest')
-    axs[2].set_title('Ensemble')
+    # axs[2].imshow(heatmap_3.T, cmap='hot', interpolation='nearest')
+    # axs[2].set_title('Ensemble')
     # plt.suptitle("Ensemble 1")
     plt.tight_layout()
     plt.show()
