@@ -42,13 +42,13 @@ class CAE(nn.Module):
         # Encoder
         self.enc = nn.Sequential(
             nn.Linear(10, 10),
-            nn.Tanh(),
+            nn.ReLU(),
             # nn.Dropout(0.1),
             nn.Linear(10, 12),
-            nn.Tanh(),
+            nn.ReLU(),
             # nn.Dropout(0.1),
             nn.Linear(12, 10),
-            nn.Tanh(),
+            nn.ReLU(),
             # nn.Dropout(0.1)
         )
         self.fc_mean = nn.Linear(10, 1)
@@ -56,13 +56,13 @@ class CAE(nn.Module):
 
         # Decoder
         self.dec = nn.Sequential(
-            nn.Linear(9, 12),
-            nn.Tanh(),
+            nn.Linear(9, 6),
+            nn.ReLU(),
             # nn.Dropout(0.1),
-            nn.Linear(12, 10),
-            nn.Tanh(),
+            # nn.Linear(12, 10),
+            nn.ReLU(),
             # nn.Dropout(0.1),
-            nn.Linear(10, 2)
+            nn.Linear(6, 2)
         )
 
     def reparam(self, mean, log_var):
@@ -100,7 +100,7 @@ def main(num):
     model = CAE()
     model = model.to(device)
     dataname = 'data/dataset.pkl'
-    savename = "models/vae_random_75_" + str(num)
+    savename = "models/vae_relu_small_decoder_" + str(num)
     print(savename)
 
     EPOCH = 2000

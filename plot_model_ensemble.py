@@ -95,7 +95,7 @@ class Player(pygame.sprite.Sprite):
 
 def main():
 
-    name = "models/vae_random_75_"
+    name = "models/vae_relu_small_decoder_"
     models = []
     N = 10
     for i in range(N):
@@ -111,10 +111,10 @@ def main():
     obs_positions = []
     start_states = []
     for i in range(3):
-        # position_blue = [np.random.random(), np.random.random()]
-        # position_green = [np.random.random(), np.random.random()]
-        position_blue = [0.2, np.random.random()]
-        position_green = [0.8, np.random.random()]
+        position_blue = [np.random.random(), np.random.random()]
+        position_green = [np.random.random(), np.random.random()]
+        # position_blue = [0.2, np.random.random()]
+        # position_green = [0.8, np.random.random()]
         positions_blue.append(position_blue)
         positions_green.append(position_green)
         obs_position = position_blue + position_green + position_gray
