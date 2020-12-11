@@ -6,8 +6,8 @@ import pickle
 import random
 import numpy as np
 
-# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-device = "cpu"
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# device = "cpu"
 
 
 # collect dataset
@@ -85,8 +85,9 @@ class CAE(nn.Module):
 def main():
 
     model = CAE()
+    model = model.to(device)
     dataname = 'data/dataset.pkl'
-    savename = "models/cae_model"
+    savename = "models/cae_gpu"
 
     EPOCH = 2000
     BATCH_SIZE_TRAIN = 400
