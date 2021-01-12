@@ -6,8 +6,8 @@ import pickle
 import random
 import numpy as np
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-# device = "cpu"
+# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = "cpu"
 
 
 # collect dataset
@@ -82,12 +82,12 @@ class CAE(nn.Module):
 
 
 # train cAE
-def main():
+def main(num):
 
     model = CAE()
     model = model.to(device)
     dataname = 'data/dataset.pkl'
-    savename = "models/cae_gpu"
+    savename = "models/cae_ensemble_dropout_" + str(num)
 
     EPOCH = 2000
     BATCH_SIZE_TRAIN = 400
@@ -113,4 +113,5 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    for i in range(1,11):
+        main(i)

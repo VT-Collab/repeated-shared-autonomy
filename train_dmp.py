@@ -12,7 +12,7 @@ device = "cpu"
 
 # Some constants
 ALPHA = 1.
-BETA = 1.
+BETA = 1.0
 TAU = 1.0
 T = 0.033 #time between data points (30fps => 1/30 sec)
 
@@ -29,7 +29,7 @@ class MotionData(Dataset):
         return len(self.data)
 
     def __getitem__(self, idx):
-        item = self.all_data[idx]
+        item = self.data[idx]
         snippet = torch.FloatTensor(item[0]).to(device)
         state = torch.FloatTensor(item[1]).to(device)
         true_z = torch.FloatTensor(item[2]).to(device)
@@ -48,8 +48,10 @@ class CAE(nn.Module):
         # self.BETA = 0.01
         # self.TAU = 0.1
         # self.t = 0.033 #time between data points (30fps => 1/30 sec)
-        self.prev_y = torch.zeros(400, 2)
-        self.prev_y_dot = torch.zeros(400, 2)
+        # self.prev_y = torch.zeros(400, 2)
+        # self.prev_y_dot = torch.zeros(400, 2)
+        # avg action size [0.18212835 0.1767881 ]
+        self.action_magnitude = torch.FloatTensor([0.18, 0.17]).to(device)
 
         # Encoder
         self.enc = nn.Sequential(
@@ -74,29 +76,19 @@ class CAE(nn.Module):
         ztrue = x[2] #this is the ground truth label, for use when trouble shooting
         a = x[3]
         z = self.encoder(c)
-        a_decoded = self.action(z)
+        a_decoded = self.action(z, s)
         loss = self.loss(a_decoded, a)
         return loss
 
     def loss(self, a_decoded, a_target):
         return self.loss_func(a_decoded, a_target)
 
-    def action(self, z):
-        y_ddot = torch.zeros(z.size())
-        y_dot = torch.zeros(z.size())
-        y = torch.zeros(z.size())
-
-        y_ddot = 1 / TAU * ALPHA * (BETA * (z - self.prev_y) - self.prev_y_dot)
-        y_dot = self.prev_y_dot + y_ddot * T
-        y = self.prev_y + y_dot * T + 0.5 * y_ddot * T ** 2
-        
-        self.prev_y = y
-        self.prev_y_dot = y_dot
-        return y
-
-    def reset(self):
-        self.prev_y = torch.zeros(400, 2)
-        self.prev_y_dot = torch.zeros(400, 2)
+    def action(self, z, s):
+        y = s[:, 6:8]
+        action = (z - y) * BETA
+        # action = 0.5 * torch.div(action, z)
+        # action = torch.clamp(action, -0.5, 0.5)
+        return action
 
 # train cAE
 def main(num):
@@ -109,7 +101,7 @@ def main(num):
 
     EPOCH = 2000
     BATCH_SIZE_TRAIN = 400
-    LR = 0.01
+    LR = 0.001
     LR_STEP_SIZE = 1400
     LR_GAMMA = 0.1
 
@@ -124,8 +116,8 @@ def main(num):
             a_target = x[3]
             optimizer.zero_grad()
             loss = model(x)
-            loss.detach_()
-            loss = Variable(loss, requires_grad = True)
+            # loss.detach_()
+            # loss = Variable(loss, requires_grad = True)
             loss.backward()
             optimizer.step()
         scheduler.step()

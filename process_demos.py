@@ -9,9 +9,9 @@ def main():
 
     dataset = []
     folder = 'data/demos'
-    savename = 'data/dataset_dmp.pkl'
+    savename = 'data/dataset.pkl'
     scale = 10.0
-
+    actions = []
     for filename in os.listdir(folder):
         traj = pickle.load(open(folder + "/" + filename, "rb"))
         n_states = len(traj)
@@ -20,16 +20,17 @@ def main():
         else:
             z = 0
         home_state = traj[0]
-        actions = []
         for idx in range(n_states-1):
             position = np.asarray(traj[idx])[6:8]
             action = scale * (np.asarray(traj[idx + 1])[6:8] - position)
-            actions.append(action)
-        dataset.append((home_state + position.tolist(), traj[idx], [z], action.tolist()))
+            actions.append(np.absolute(action))
+            dataset.append((home_state + position.tolist(), traj[idx], [z], action.tolist()))
 
     pickle.dump(dataset, open(savename, "wb"))
     print(dataset)
     print("[*] I have this many subtrajectories: ", len(dataset))
+    avg = np.mean(actions, axis =0)
+    print("[*] This is the average action magnitude: ", np.amin(actions))
 
 
 

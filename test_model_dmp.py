@@ -11,7 +11,7 @@ import copy
 
 # Some constants
 ALPHA = 0.1
-BETA = 0.01
+BETA = 1.0
 TAU = 1.0
 T = 0.033 #time between data points (30fps => 1/30 sec)
 
@@ -22,9 +22,10 @@ class Model(object):
         model_dict = torch.load(modelname, map_location='cpu')
         self.model.load_state_dict(model_dict)
         self.model.eval
-        self.prev_y = torch.zeros(1,2)
-        self.prev_y_dot = torch.zeros(1,2)
+        # self.prev_y = torch.zeros(1,2)
+        # self.prev_y_dot = torch.zeros(1,2)
         # self.enable_dropout()
+        self.action_magnitude = torch.FloatTensor([0.18, 0.17])
 
     def enable_dropout(self):
         for m in self.model.modules():
@@ -35,18 +36,12 @@ class Model(object):
         z = self.model.encoder(torch.FloatTensor(c))
         return z
 
-    def action(self, z):
-        y_ddot = torch.zeros(z.size())
-        y_dot = torch.zeros(z.size())
-        y = torch.zeros(z.size())
-
-        y_ddot = 1 / TAU * ALPHA * (BETA * (z- self.prev_y) - self.prev_y_dot)
-        y_dot = self.prev_y_dot + y_ddot * T
-        y = self.prev_y + y_dot * T + 0.5 * y_ddot * T ** 2
-        
-        self.prev_y = y
-        self.prev_y_dot = y_dot
-        return y
+    def action(self, z, s):
+        s = torch.FloatTensor(s)
+        y = s[6:8]
+        action = (z - y) * BETA
+        # action = 0.5 * torch.div(action, z)
+        return action
 
 class Joystick(object):
 
@@ -164,7 +159,7 @@ def main():
         actions = np.zeros((100, 2))
         for idx in range(100):
             z = model.encoder(c)
-            a_robot = model.action(z)
+            a_robot = model.action(z, s)
             actions[idx,:] = a_robot.detach().numpy()
         a_robot = np.mean(actions, axis=0)
         print("action std: ", np.std(actions))
