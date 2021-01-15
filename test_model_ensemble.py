@@ -5,7 +5,7 @@ import math
 import numpy as np
 import time
 import pickle
-from train_model_variation import CAE
+from train_model import CAE
 import torch
 import copy
 
@@ -25,13 +25,15 @@ class Model(object):
                 m.train()
 
     def encoder(self, c):
-        z_mean, z_log_var = self.model.encoder(torch.FloatTensor(c))
-        return z_mean.tolist(), torch.exp(0.5*z_log_var).tolist()
+        # z_mean, z_log_var = self.model.encoder(torch.FloatTensor(c))
+        # return z_mean.tolist(), torch.exp(0.5*z_log_var).tolist()
+        return self.model.enc(torch.FloatTensor(c))
 
     def decoder(self, z, s):
         z_tensor = torch.FloatTensor(z + s)
-        a_predicted = self.model.decoder(z_tensor)
-        return a_predicted.data.numpy()
+        # a_predicted = self.model.decoder(z_tensor)
+        # return a_predicted.data.numpy()
+        return self.model.dec(z_tensor)
 
 class Joystick(object):
 
@@ -96,7 +98,7 @@ class Player(pygame.sprite.Sprite):
 
 def main():
 
-    name = "models/vae_ensemble_"
+    name = "models/cae_ensemble_dropout_"
 
     clock = pygame.time.Clock()
     pygame.init()
@@ -106,7 +108,7 @@ def main():
     # model = Model(modelname)
     models = []
     for i in range(1,11):
-        num = i+1
+        num = i
         modelname = name + str(num)
         print(modelname)
         model = Model(modelname)
@@ -155,13 +157,14 @@ def main():
         # z_std = z_std[0]
         # print("Z_mean: ",z_mean)
         # print("Z_std: ",z_std)
-        actions = np.zeros((5, 2))
-        for idx in range(1,11):
+        actions = np.zeros((10, 2))
+        for idx in range(0,10):
             model = models[idx]
-            z_mean, z_std = model.encoder(c)
-            z = z_mean[0] #+ np.random.normal() * z_std
+            z = model.encoder(c)
+            # z = z_mean[0] #+ np.random.normal() * z_std
             a_robot = model.decoder([z], s)
-            actions[idx,:] = a_robot
+            # print(a_robot)
+            actions[idx,:] = a_robot.detach().numpy()
         a_robot = np.mean(actions, axis=0)
         print("action std: ", np.std(actions))
 
