@@ -106,14 +106,21 @@ class Player(pygame.sprite.Sprite):
 
 def main():
 
-    modelname = "models/dmp_1"
+    name = "models/dmp_"
 
     clock = pygame.time.Clock()
     pygame.init()
     fps = 30
 
     joystick = Joystick()
-    model = Model(modelname)
+    # model = Model(modelname)
+    models = []
+    for i in range(1,11):
+        num = i
+        modelname = name + str(num)
+        print(modelname)
+        model = Model(modelname)
+        models.append(model)
 
     world = pygame.display.set_mode([700,700])
     # position_player = np.random.random(2)
@@ -121,8 +128,8 @@ def main():
     # postition_green = np.random.random(2)
     # postition_gray = np.random.random(2)
     position_player = [0.5,0.5]
-    postition_blue = [0.1, 0.4]#np.random.random()]
-    postition_green = [0.9, 0.56]#np.random.random()]
+    postition_blue = [np.random.random(), np.random.random()]
+    postition_green = [np.random.random(), np.random.random()]
     postition_gray = [0.5, 0.1]
     # obs_position = postition_blue.tolist() + postition_green.tolist() + postition_gray.tolist()
     obs_position = postition_blue + postition_green + postition_gray
@@ -156,8 +163,9 @@ def main():
         
         # print("Z_mean: ",z_mean)
         # print("Z_std: ",z_std)
-        actions = np.zeros((100, 2))
-        for idx in range(100):
+        actions = np.zeros((10, 2))
+        for idx in range(0,10):
+            model = models[idx]
             z = model.encoder(c)
             a_robot = model.action(z, s)
             actions[idx,:] = a_robot.detach().numpy()

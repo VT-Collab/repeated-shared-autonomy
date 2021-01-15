@@ -63,7 +63,7 @@ class CAE(nn.Module):
             # nn.Dropout(0.1),
             nn.Linear(12, 10),
             nn.ReLU(),
-            # nn.Dropout(0.1)
+            # nn.Dropout(0.1),
             nn.Linear(10, 2)
         )
 
@@ -96,7 +96,7 @@ def main(num):
     model = CAE()
     model = model.to(device)
     dataname = 'data/dataset.pkl'
-    savename = "models/dmp_" + str(num)
+    savename = "models/dmp_ensemble_" + str(num)
     print(savename)
 
     EPOCH = 2000
@@ -126,5 +126,5 @@ def main(num):
 
 
 if __name__ == "__main__":
-    for i in range(1,2):
+    for i in range(1,11):
         main(i)

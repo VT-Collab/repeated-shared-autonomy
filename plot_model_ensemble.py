@@ -5,9 +5,15 @@ import math
 import numpy as np
 import time
 import pickle
-from train_model_variation import CAE
+from train_dmp import CAE
 import torch
 import matplotlib.pyplot as plt
+
+# Some constants
+ALPHA = 1.
+BETA = 1.0
+TAU = 1.0
+T = 0.033 #time between data points (30fps => 1/30 sec)
 
 class Model(object):
 
@@ -23,14 +29,38 @@ class Model(object):
             if m.__class__.__name__.startswith('Dropout'):
                 m.train()
 
-    def encoder(self, c):
-        z_mean, z_log_var = self.model.encoder(torch.FloatTensor(c))
-        return z_mean.tolist(), torch.exp(0.5*z_log_var).tolist()
+    # def encoder(self, c):
+    #     z_mean, z_log_var = self.model.encoder(torch.FloatTensor(c))
+    #     return z_mean.tolist(), torch.exp(0.5*z_log_var).tolist()
 
-    def decoder(self, z, s):
-        z_tensor = torch.FloatTensor(z + s)
-        a_predicted = self.model.decoder(z_tensor)
-        return a_predicted.data.numpy()
+    # def decoder(self, z, s):
+    #     z_tensor = torch.FloatTensor(z + s)
+    #     a_predicted = self.model.decoder(z_tensor)
+    #     return a_predicted.data.numpy()
+
+    # # For dropout + ensemble
+    # def encoder(self, c):
+    #     # z_mean, z_log_var = self.model.encoder(torch.FloatTensor(c))
+    #     # return z_mean.tolist(), torch.exp(0.5*z_log_var).tolist()
+    #     return self.model.enc(torch.FloatTensor(c))
+
+    # def decoder(self, z, s):
+    #     z_tensor = torch.FloatTensor(z + s)
+    #     # a_predicted = self.model.decoder(z_tensor)
+    #     # return a_predicted.data.numpy()
+    #     return self.model.dec(z_tensor)
+
+    # For DMP
+    def encoder(self, c):
+        z = self.model.encoder(torch.FloatTensor(c))
+        return z
+
+    def action(self, z, s):
+        s = torch.FloatTensor(s)
+        y = s[6:8]
+        action = (z - y) * BETA
+        # action = 0.5 * torch.div(action, z)
+        return action    
 
 class Joystick(object):
 
@@ -95,7 +125,7 @@ class Player(pygame.sprite.Sprite):
 
 def main():
 
-    name = "models/vae_relu_small_decoder_"
+    name = "models/dmp_"
     models = []
     N = 10
     for i in range(N):
@@ -149,25 +179,34 @@ def main():
             actions_3 = np.zeros((N, 2))
             for idx in range(N):
                 model = models[idx]
-                z_mean_1, z_std_1 = model.encoder(c_1)
-                z_mean_1 = z_mean_1[0]
-                z_std_1 = z_std_1[0]
-                z_mean_2, z_std_2 = model.encoder(c_2)
-                z_mean_2 = z_mean_2[0]
-                z_std_2 = z_std_2[0]
-                z_mean_3, z_std_3 = model.encoder(c_3)
-                z_mean_3 = z_mean_3[0]
-                z_std_3 = z_std_3[0]
+                # z_mean_1, z_std_1 = model.encoder(c_1)
+                # z_mean_1 = z_mean_1[0]
+                # z_std_1 = z_std_1[0]
+                # z_mean_2, z_std_2 = model.encoder(c_2)
+                # z_mean_2 = z_mean_2[0]
+                # z_std_2 = z_std_2[0]
+                # z_mean_3, z_std_3 = model.encoder(c_3)
+                # z_mean_3 = z_mean_3[0]
+                # z_std_3 = z_std_3[0]
 
-                z_1 = z_mean_1 + np.random.normal() * z_std_1
-                z_2 = z_mean_2 + np.random.normal() * z_std_2
-                z_3 = z_mean_3 + np.random.normal() * z_std_3
-                a_robot_1 = model.decoder([z_1], s_1)
-                a_robot_2 = model.decoder([z_2], s_2)
-                a_robot_3 = model.decoder([z_3], s_3)
-                actions_1[idx,:] = a_robot_1
-                actions_2[idx,:] = a_robot_2
-                actions_3[idx,:] = a_robot_3
+                z_1 = model.encoder(c_1)
+                z_2 = model.encoder(c_2)
+                z_3 = model.encoder(c_3)
+                # z_1 = z_mean_1 + np.random.normal() * z_std_1
+                # z_2 = z_mean_2 + np.random.normal() * z_std_2
+                # z_3 = z_mean_3 + np.random.normal() * z_std_3
+                # a_robot_1 = model.decoder([z_1], s_1)
+                # a_robot_2 = model.decoder([z_2], s_2)
+                # a_robot_3 = model.decoder([z_3], s_3)
+
+                a_robot_1 = model.action(z_1, s_1)
+                a_robot_2 = model.action(z_2, s_2)
+                a_robot_3 = model.action(z_3, s_3)
+
+                actions_1[idx,:] = a_robot_1.detach().numpy()
+                actions_2[idx,:] = a_robot_2.detach().numpy()
+                actions_3[idx,:] = a_robot_3.detach().numpy()
+
             # a_robot = np.mean(actions, axis=0)
             heatmap_1[row,col] = np.std(actions_1)
             heatmap_2[row,col] = np.std(actions_2)
@@ -193,7 +232,7 @@ def main():
     # axs[1].set_title('BETA = 0.0001')
     axs[2].imshow(heatmap_3.T, cmap='hot', interpolation='nearest')
     # axs[2].set_title('BETA = 0.000001')
-    plt.suptitle("Ensemble 1")
+    plt.suptitle("DMP & Ensemble ")
     plt.tight_layout()
     plt.show()
 
