@@ -83,20 +83,20 @@ def main():
     print("False positives: {} => {}".format(fp, fp/float(len(y_test))))
 
 
-    plot_tn = random.sample(true_negatives, 3)
+    plot_tn = random.sample(true_negatives, 9)
     plot_tn = [element[0] for element in plot_tn]
     # print(plot_tn[0][:2])
-    fig, axs = plt.subplots(1, 3, figsize=(9, 3), sharey=True)
+    fig, axs = plt.subplots(3, 3, figsize=(9, 9), sharey=True)
     i = 0
-    for ax in axs:
+    for ax in axs.reshape(-1):
         position_blue = plot_tn[i][:2]
         position_green = plot_tn[i][2:4]
-        position_gray = plot_tn[i][4:6]
-        position_player = plot_tn[i][6:8]
+        position_start = plot_tn[i][6:8]
+        position_current = plot_tn[i][8:]
         ax.plot(position_blue[0], position_blue[1], 'bo', markersize=14)
         ax.plot(position_green[0], position_green[1], 'go', markersize=14)
-        ax.plot(position_gray[0], position_gray[1], 'ko', markersize=14)
-        ax.plot(position_player[0], position_player[1], 'mo', markersize=14)
+        ax.plot(position_start[0], position_start[1], 'ko', markersize=14)
+        ax.plot(position_current[0], position_current[1], 'mo', markersize=14)
         ax.set_ylim(0.0, 1.0)
         ax.set_xlim(0.0, 1.0) 
         i+= 1
