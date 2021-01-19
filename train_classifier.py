@@ -59,9 +59,9 @@ class Net(nn.Module):
     def forward(self, x):
         c = x[0]
         s = x[1]
-        c_output = self.classify(c)
-        c_true = x[4]
-        loss = self.loss(c_output, c_true)
+        y_output = self.classify(c)
+        y_true = x[4]
+        loss = self.loss(y_output, y_true)
         return loss
 
     def loss(self, output, target):
@@ -83,17 +83,10 @@ def main():
     LR_GAMMA = 0.1
 
     raw_data = pickle.load(open(dataname, "rb"))
-
-    # print(raw_data)
     inputs = [element[:4] for element in raw_data]
     targets = [element[4] for element in raw_data]
-    # print("---")
-    # print(len(inputs))
-    # print(targets)
 
     X_train, X_test, y_train, y_test = train_test_split(inputs, targets, test_size=0.2, stratify=targets)
-    # y_train = torch.nn.functional.one_hot(y_train)
-    # y_test = torch.nn.functional.one_hot(y_test)
 
     pickle.dump(X_train, open("data/X_train_data.pkl", "wb"))
     pickle.dump(y_train, open("data/y_train_data.pkl", "wb"))
