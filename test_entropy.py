@@ -96,13 +96,14 @@ class Player(pygame.sprite.Sprite):
 def main():
 
     modelname = "models/entropy_0001_1"
-
+    model = Model(modelname)
+    
     clock = pygame.time.Clock()
     pygame.init()
     fps = 30
 
     joystick = Joystick()
-    model = Model(modelname)
+
 
     world = pygame.display.set_mode([700,700])
     position_player = np.random.random(2)

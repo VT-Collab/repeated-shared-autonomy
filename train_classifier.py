@@ -38,6 +38,7 @@ class Net(nn.Module):
         super(Net, self).__init__()
 
         self.loss_func = nn.CrossEntropyLoss()
+        # self.loss_func = nn.MSELoss()
 
         # Classifier
         self.classifier = nn.Sequential(
@@ -50,7 +51,8 @@ class Net(nn.Module):
             nn.Linear(12, 10),
             nn.Tanh(),
             # nn.Dropout(0.1),
-            nn.Linear(10, 2)
+            nn.Linear(10, 2),
+            # nn.Softmax(dim=1)
         )
 
     def classify(self, x):
@@ -65,6 +67,7 @@ class Net(nn.Module):
         return loss
 
     def loss(self, output, target):
+        # output = torch.cat((output, 1-output), dim=1)
         return self.loss_func(output, target)
 
 
@@ -76,24 +79,17 @@ def main():
     dataname = 'data/dataset_with_fake_dist.pkl'
     savename = "models/classifier_dist"
 
-    EPOCH = 2000
+    EPOCH = 1500
     BATCH_SIZE_TRAIN = 400
-    LR = 0.01
-    LR_STEP_SIZE = 1400
-    LR_GAMMA = 0.1
+    LR = 0.006 # Learning rate
+    LR_STEP_SIZE = 1400 # Num epochs before LR decay
+    LR_GAMMA = 0.1 # LR decay factor
 
     raw_data = pickle.load(open(dataname, "rb"))
     inputs = [element[:4] for element in raw_data]
     targets = [element[4] for element in raw_data]
 
-    X_train, X_test, y_train, y_test = train_test_split(inputs, targets, test_size=0.3, stratify=targets)
-
-    pickle.dump(X_train, open("data/X_train_data.pkl", "wb"))
-    pickle.dump(y_train, open("data/y_train_data.pkl", "wb"))
-    pickle.dump(X_test, open("data/X_test_data.pkl", "wb"))
-    pickle.dump(y_test, open("data/y_test_data.pkl", "wb"))
-
-    train_data = MotionData(X_train, y_train)
+    train_data = MotionData(inputs, targets)
     train_set = DataLoader(dataset=train_data, batch_size=BATCH_SIZE_TRAIN, shuffle=True)
 
     optimizer = optim.Adam(model.parameters(), lr=LR)
@@ -109,17 +105,5 @@ def main():
         print(epoch, loss.item())
         torch.save(model.state_dict(), savename)
 
-    test_outputs = []
-    correct = 0
-    with torch.no_grad():
-        for idx, data in enumerate(X_test):
-            c = torch.FloatTensor(data[0]).to(device)
-            out = model.classify(c)
-            _, label = torch.max(out.data, 0)
-            test_outputs.append(label.item())
-            if label.item() == y_test[idx]:
-                correct += 1
-
-    print(correct/float(len(y_test)))
 if __name__ == "__main__":
     main()

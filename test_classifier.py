@@ -1,109 +1,190 @@
-import torch
-import torch.nn as nn
-import torch.optim as optim
-from torch.utils.data import Dataset, DataLoader
-import pickle
-import random
+import pygame
+import sys
+import os
+import math
 import numpy as np
-from sklearn.model_selection import train_test_split
+import time
+import pickle
+import torch
+import copy
 from train_classifier import Net
-import matplotlib.pyplot as plt
-
+from train_model import CAE
+import torch.nn.functional as F
 # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 device = "cpu"
 
 # Classifer
 class Model(object):
 
-    def __init__(self, modelname):
-        self.model = Net()
-        model_dict = torch.load(modelname, map_location='cpu')
-        self.model.load_state_dict(model_dict)
-        self.model.eval
+    def __init__(self, classifier_name, cae_name):
+        self.class_net = Net()
+        self.cae_net = CAE()
+        
+        model_dict = torch.load(classifier_name, map_location='cpu')
+        self.class_net.load_state_dict(model_dict)
+        
+        model_dict = torch.load(cae_name, map_location='cpu')
+        self.cae_net.load_state_dict(model_dict)
+
+        self.class_net.eval
+        self.cae_net.eval
         # self.enable_dropout()
 
-    def enable_dropout(self):
-        for m in self.model.modules():
-            if m.__class__.__name__.startswith('Dropout'):
-                m.train()
+    def classify(self, c):
+        labels = self.class_net.classifier(torch.FloatTensor(c))
+        confidence = F.softmax(labels, dim=0)
+        return confidence.data[0].numpy()
 
-    def classify(self, x):
-        return self.model.classifier(x)
+    def encoder(self, c):
+        z_tensor = self.cae_net.encoder(torch.FloatTensor(c))
+        return z_tensor.tolist()
 
-    def forward(self, x):
-        c = x[0]
-        s = x[1]
-        c_output = self.classify(c)
-        c_true = x[4]
-        loss = self.loss(c_output, c_true)
-        return loss
+    def decoder(self, z, s):
+        z_tensor = torch.FloatTensor(z + s)
+        a_predicted = self.cae_net.decoder(z_tensor)
+        return a_predicted.data.numpy()
 
-    def loss(self, output, target):
-        return self.loss_func(output, target)
+class Joystick(object):
 
+    def __init__(self):
+        self.gamepad = pygame.joystick.Joystick(0)
+        self.gamepad.init()
+        self.DEADBAND = 0.1
+
+    def input(self):
+        pygame.event.get()
+        z1 = self.gamepad.get_axis(0)
+        if abs(z1) < self.DEADBAND:
+            z1 = 0.0
+        z2 = self.gamepad.get_axis(1)
+        if abs(z2) < self.DEADBAND:
+            z2 = 0.0
+        start = self.gamepad.get_button(1)
+        stop = self.gamepad.get_button(0)
+        return [z1, z2], start, stop
+
+
+class Object(pygame.sprite.Sprite):
+
+    def __init__(self, position, color):
+
+        # create sprite
+        pygame.sprite.Sprite.__init__(self)
+        self.image = pygame.Surface((25,25))
+        self.image.fill(color)
+        self.rect = self.image.get_rect()
+
+        # initial conditions
+        self.x = position[0]
+        self.y = position[1]
+        self.rect.x = (self.x * 500) + 100 - self.rect.size[0] / 2
+        self.rect.y = (self.y * 500) + 100 - self.rect.size[1] / 2
+
+
+class Player(pygame.sprite.Sprite):
+
+    def __init__(self, position):
+
+        # create sprite
+        pygame.sprite.Sprite.__init__(self)
+        self.image = pygame.Surface((50,50))
+        self.image.fill((255, 128, 0))
+        self.rect = self.image.get_rect()
+
+        # initial conditions
+        self.x = position[0]
+        self.y = position[1]
+        self.rect.x = (self.x * 500) + 100 - self.rect.size[0] / 2
+        self.rect.y = (self.y * 500) + 100 - self.rect.size[1] / 2
+
+    def update(self, s):
+        self.rect = self.image.get_rect(center=self.rect.center)
+        self.x = s[0]
+        self.y = s[1]
+        self.rect.x = (self.x * 500) + 100 - self.rect.size[0] / 2
+        self.rect.y = (self.y * 500) + 100 - self.rect.size[1] / 2
 
 # train cAE
 def main():
 
-    name = "models/classifier_dist"
-    model = Model(name)
+    classifier_name = "models/classifier_dist"
+    cae_name = "models/cae_model"
 
-    X_train = pickle.load(open("data/X_train_data.pkl", "rb"))
-    y_train = pickle.load(open("data/y_train_data.pkl", "rb"))
-    X_test = pickle.load(open("data/X_test_data.pkl", "rb"))
-    y_test = pickle.load(open("data/y_test_data.pkl", "rb"))
+    model = Model(classifier_name, cae_name)
 
-    correct = 0 # Number of correct
-    tn = 0 # Number of True negatives
-    fp = 0 # Number of false positives
-    true_negatives = [] # Store true negatives
-    false_positives = [] # Store false positives
+    clock = pygame.time.Clock()
+    pygame.init()
+    fps = 30
 
-    with torch.no_grad():
-        for idx, data in enumerate(X_test):
-            c = torch.FloatTensor(data[0]).to(device)
-            out = model.classify(c)
-            _, label = torch.max(out.data, 0) # Get classes
-            if label.item() == y_test[idx]:
-                correct += 1
-            elif label.item() == 0:
-                fp += 1
-                false_positives.append(data)
-            elif label.item() == 1:
-                tn += 1
-                true_negatives.append(data)
-
-    y_test = np.asarray(y_test)
-    true_count =  np.count_nonzero(y_test == 0)
-    false_count =  np.count_nonzero(y_test == 1)
-    print("total true: ", true_count)
-    print("total false:", false_count)
-    print("Accuracy: {} => {}".format(len(y_test), correct/float(len(y_test))) )
-    print("True negatives: {} => {}".format(tn , tn/float(len(y_test))) )
-    print("False positives: {} => {}".format(fp, fp/float(len(y_test))))
+    joystick = Joystick()
 
 
-    plot_tn = random.sample(true_negatives, 9)
-    plot_tn = [element[0] for element in plot_tn]
-    # print(plot_tn[0][:2])
-    fig, axs = plt.subplots(3, 3, figsize=(9, 9), sharey=True)
-    i = 0
-    for ax in axs.reshape(-1):
-        position_blue = plot_tn[i][:2]
-        position_green = plot_tn[i][2:4]
-        position_start = plot_tn[i][6:8]
-        position_current = plot_tn[i][8:]
-        ax.plot(position_blue[0], position_blue[1], 'bo', markersize=14)
-        ax.plot(position_green[0], position_green[1], 'go', markersize=14)
-        ax.plot(position_start[0], position_start[1], 'ko', markersize=14)
-        ax.plot(position_current[0], position_current[1], 'mo', markersize=14)
-        ax.set_ylim(0.0, 1.0)
-        ax.set_xlim(0.0, 1.0) 
-        i+= 1
-    plt.suptitle("True Negatives (Black - start, Magenta - Current)")
-    plt.tight_layout()
-    plt.show()
+    world = pygame.display.set_mode([700,700])
+    position_player = np.random.random(2)
+    postition_blue = np.random.random(2)
+    postition_green = np.random.random(2)
+    postition_gray = np.random.random(2)
+    # position_player = [0.5,0.5]
+    # postition_blue = [0.1, 0.4]#np.random.random()]
+    # postition_green = [0.9, 0.56]#np.random.random()]
+    # postition_gray = [0.5, 0.1]
+    obs_position = postition_blue.tolist() + postition_green.tolist() + postition_gray.tolist()
+    # obs_position = postition_blue + postition_green + postition_gray
 
+
+    player = Player(position_player)
+    blue = Object(postition_blue, [0, 0, 255])
+    green = Object(postition_green, [0, 255, 0])
+    gray = Object(postition_gray, [128, 128, 128])
+
+    sprite_list = pygame.sprite.Group()
+    sprite_list.add(player)
+    sprite_list.add(blue)
+    sprite_list.add(green)
+    sprite_list.add(gray)
+
+    world.fill((0,0,0))
+    sprite_list.draw(world)
+    pygame.display.flip()
+    clock.tick(fps)
+
+    start_state = obs_position + position_player.tolist()
+    # start_state = obs_position + position_player
+    startt = time.time()
+
+    while True:
+
+        q = np.asarray([player.x, player.y])
+        s = obs_position + q.tolist()
+        c = start_state + q.tolist()
+        actions = np.zeros((100, 2))
+        zs = []
+
+        confidence = 0.75 * model.classify(c)
+        print(confidence)
+
+        for idx in range(100):
+            z = model.encoder(c)
+            a_robot = model.decoder(z, s)
+            zs += z
+            actions[idx,:] = a_robot
+        a_robot = np.mean(actions, axis=0)
+        a_var = np.std(actions, axis=0)
+
+        action, start, stop = joystick.input()
+        if stop:
+            pygame.quit(); sys.exit()
+
+        q += 0.01 * (np.asarray(a_robot) * confidence + np.asarray(action) * (1 - confidence))
+
+        # dynamics
+        player.update(q)
+
+        # animate
+        world.fill((0,0,0))
+        sprite_list.draw(world)
+        pygame.display.flip()
+        clock.tick(fps)
 
 if __name__ == "__main__":
     main()
