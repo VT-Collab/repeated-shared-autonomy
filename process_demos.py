@@ -44,7 +44,7 @@ def main():
             traj_type = 1
             position = np.random.random(2)
             pos_dist = calculate_dist(home_state, position)
-            while pos_dist == 0.2:
+            while pos_dist == 0.3:
                 position =np.random.random(2)
                 pos_dist = calculate_dist(home_state, position)
 
