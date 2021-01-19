@@ -86,7 +86,7 @@ def main():
     inputs = [element[:4] for element in raw_data]
     targets = [element[4] for element in raw_data]
 
-    X_train, X_test, y_train, y_test = train_test_split(inputs, targets, test_size=0.2, stratify=targets)
+    X_train, X_test, y_train, y_test = train_test_split(inputs, targets, test_size=0.3, stratify=targets)
 
     pickle.dump(X_train, open("data/X_train_data.pkl", "wb"))
     pickle.dump(y_train, open("data/y_train_data.pkl", "wb"))

@@ -20,7 +20,7 @@ class Model(object):
         model_dict = torch.load(modelname, map_location='cpu')
         self.model.load_state_dict(model_dict)
         self.model.eval
-        self.enable_dropout()
+        # self.enable_dropout()
 
     def enable_dropout(self):
         for m in self.model.modules():
@@ -53,25 +53,25 @@ def main():
     X_test = pickle.load(open("data/X_test_data.pkl", "rb"))
     y_test = pickle.load(open("data/y_test_data.pkl", "rb"))
 
-    correct = 0
-    tn = 0
-    fp = 0
-    true_negatives = []
-    false_positives = []
+    correct = 0 # Number of correct
+    tn = 0 # Number of True negatives
+    fp = 0 # Number of false positives
+    true_negatives = [] # Store true negatives
+    false_positives = [] # Store false positives
 
     with torch.no_grad():
         for idx, data in enumerate(X_test):
             c = torch.FloatTensor(data[0]).to(device)
             out = model.classify(c)
-            _, label = torch.max(out.data, 0)
+            _, label = torch.max(out.data, 0) # Get classes
             if label.item() == y_test[idx]:
                 correct += 1
             elif label.item() == 0:
-                tn += 1
-                true_negatives.append(data)
-            elif label.item() == 1:
                 fp += 1
                 false_positives.append(data)
+            elif label.item() == 1:
+                tn += 1
+                true_negatives.append(data)
 
     y_test = np.asarray(y_test)
     true_count =  np.count_nonzero(y_test == 0)
@@ -100,7 +100,7 @@ def main():
         ax.set_ylim(0.0, 1.0)
         ax.set_xlim(0.0, 1.0) 
         i+= 1
-    plt.suptitle("True Negatives")
+    plt.suptitle("True Negatives (Black - start, Magenta - Current)")
     plt.tight_layout()
     plt.show()
 
