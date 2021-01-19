@@ -95,7 +95,7 @@ class Player(pygame.sprite.Sprite):
 
 def main():
 
-    modelname = "models/entropy_1"
+    modelname = "models/entropy_0001_1"
 
     clock = pygame.time.Clock()
     pygame.init()

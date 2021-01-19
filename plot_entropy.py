@@ -94,7 +94,7 @@ class Player(pygame.sprite.Sprite):
 
 def main():
 
-    modelname = "models/entropy_1"
+    modelname = "models/entropy_0001_1"
     model = Model(modelname)
     
     position_player = [0.5,0.5]

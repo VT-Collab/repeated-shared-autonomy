@@ -37,7 +37,7 @@ class CAE(nn.Module):
 
         self.loss_func = nn.MSELoss()
         self.BETA = 0.001
-        self.lamda = 0.0001
+        self.lamda = 0.001
 
         # Encoder
         self.enc = nn.Sequential(
@@ -97,15 +97,19 @@ class CAE(nn.Module):
        
         # Change true taj from 0 to 1
         y_true_flipped = torch.abs(y_true - 1)
+
+        # Set fake traj actions to zero
         a_decoded = y_true_flipped.unsqueeze(1) * a_decoded 
         a_target = y_true_flipped.unsqueeze(1) * a_target
         mean = y_true_flipped.unsqueeze(1) * mean
         log_var_flipped = y_true_flipped.unsqueeze(1) * log_var
 
         rce = self.loss_func(a_decoded, a_target)
-        kld = -0.5 * torch.sum(1 + log_var_flipped - mean.pow(2) - log_var_flipped.exp())
+        # kld = -0.5 * torch.sum(1 + log_var_flipped - mean.pow(2) - log_var_flipped.exp())
         action_loss = rce# + kld
-        entropy = torch.sum(log_var.exp())
+        entropy = torch.sum(log_var)
+
+        # Loss = MSE(action_true - policy_true) - entropy(fake)
         total_loss = action_loss - self.lamda * entropy
 
         return total_loss, action_loss, entropy 
@@ -116,10 +120,10 @@ def main(num):
     model = CAE()
     model = model.to(device)
     dataname = 'data/dataset_with_fake_dist.pkl'
-    savename = "models/entropy_" + str(num)
+    savename = "models/entropy_0001_" + str(num)
     print(savename)
 
-    EPOCH = 2000
+    EPOCH = 1750
     BATCH_SIZE_TRAIN = 400
     LR = 0.01
     LR_STEP_SIZE = 1400
