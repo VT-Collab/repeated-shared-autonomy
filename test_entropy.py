@@ -25,13 +25,12 @@ class Model(object):
                 m.train()
 
     def encoder(self, c):
-        z_mean, z_log_var = self.model.encoder(torch.FloatTensor(c))
-        return z_mean.tolist(), torch.exp(0.5*z_log_var).tolist()
+        return self.model.encoder(torch.FloatTensor(c))
 
     def decoder(self, z, s):
         z_tensor = torch.FloatTensor(z + s)
-        a_predicted = self.model.decoder(z_tensor)
-        return a_predicted.data.numpy()
+        a_mean, a_log_var = self.model.decoder(z_tensor)
+        return a_mean.tolist(), torch.exp(0.5*a_log_var).tolist()
 
 class Joystick(object):
 
@@ -143,15 +142,14 @@ def main():
         q = np.asarray([player.x, player.y])
         s = obs_position + q.tolist()
         c = start_state + q.tolist()
-        z_mean, z_std = model.encoder(c)
-        z_mean = z_mean[0]
-        z_std = z_std[0]
+        z = model.encoder(c)
         # print("Z_mean: ",z_mean)
         # print("Z_std: ",z_std)
         actions = np.zeros((100, 2))
+        a_robot = [0, 0]
         for idx in range(100):
-            z = z_mean + np.random.normal() * z_std
-            a_robot = model.decoder([z], s)
+            a_mean, a_std = model.decoder([z], s)
+            a_robot = a_mean + np.random.normal(size=(1,2)) * a_std
             actions[idx,:] = a_robot
         a_robot = np.mean(actions, axis=0)
         print("action std: ", np.std(actions))
