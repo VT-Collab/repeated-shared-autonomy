@@ -98,22 +98,27 @@ def main():
     modelname = "models/entropy_1"
     model = Model(modelname)
     
-    position_player = [0.5,0.5]
-    position_gray = [0.5, 0.1]
     positions_blue = []
     positions_green = []
     obs_positions = []
     start_states = []
+    positions_start = []
+    positions_gray = []
     for i in range(3):
         position_blue = [np.random.random(), np.random.random()]
         position_green = [np.random.random(), np.random.random()]
+        position_player = [np.random.random(), np.random.random()]
+        position_gray = [np.random.random(), np.random.random()]
+        
         positions_blue.append(position_blue)
         positions_green.append(position_green)
+        positions_start.append(position_player)
+        positions_gray.append(position_gray)
+
         obs_position = position_blue + position_green + position_gray
         start_state = obs_position + position_player
         obs_positions.append(obs_position)
         start_states.append(start_state)
-    
 
     row = 0
     scale = 30
@@ -166,23 +171,35 @@ def main():
             col += 1
             # print(col)
         row += 1
-    # print(heatmap)
+    
     fig, axs = plt.subplots(1, 3, figsize=(9, 3), sharey=True)
     i = 0
     for ax in axs:
         position_green = positions_green[i]
         position_blue = positions_blue[i]
-        ax.plot(position_blue[0]*scale, position_blue[1]*scale, 'bo', markersize=14)
-        ax.plot(position_green[0]*scale, position_green[1]*scale, 'go', markersize=14)
-        ax.plot(position_gray[0]*scale, position_gray[1]*scale, 'ko', markersize=14)
-        ax.plot(position_player[0]*scale, position_player[1]*scale, 'mo', markersize=14) 
+        position_player = positions_start[i]
+        position_gray = positions_gray[i]
+        ax.plot(position_blue[0]*scale, position_blue[1]*scale,'bo',\
+                        label="goal1", markersize=14)
+        ax.plot(position_green[0]*scale, position_green[1]*scale,'go',\
+                        label="goal2", markersize=14)
+        ax.plot(position_gray[0]*scale, position_gray[1]*scale,'co',\
+                        label="dummy", markersize=14)
+        ax.plot(position_player[0]*scale, position_player[1]*scale, 'mo',\
+                        label="start position", markersize=14) 
         i+= 1
-    axs[0].imshow(heatmap_1.T, cmap='hot', interpolation='nearest')
-    # axs[0].set_title('BETA = 0.001')
-    axs[1].imshow(heatmap_2.T, cmap='hot', interpolation='nearest')
-    # axs[1].set_title('BETA = 0.0001')
-    axs[2].imshow(heatmap_3.T, cmap='hot', interpolation='nearest')
-    # axs[2].set_title('BETA = 0.000001')
+    map1 = axs[0].imshow(heatmap_1.T, cmap='hot', interpolation='nearest')
+    fig.colorbar(map1, ax=axs[0])
+    map2 = axs[1].imshow(heatmap_2.T, cmap='hot', interpolation='nearest')
+    fig.colorbar(map2, ax=axs[1])
+    map3 = axs[2].imshow(heatmap_3.T, cmap='hot', interpolation='nearest')
+    fig.colorbar(map3, ax=axs[2])
+    
+    lines_labels = [axs[0].get_legend_handles_labels()]
+    lines, labels = [sum(lol, []) for lol in zip(*lines_labels)]
+    fig.legend(lines, labels)
+
+    plt.suptitle("Confidence heatmap (Lighter means lower confidence)")
     plt.tight_layout()
     plt.show()
 

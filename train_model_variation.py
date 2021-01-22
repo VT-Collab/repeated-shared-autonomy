@@ -43,13 +43,13 @@ class CAE(nn.Module):
         self.enc = nn.Sequential(
             nn.Linear(10, 10),
             nn.ReLU(),
-            # nn.Dropout(0.1),
+            nn.Dropout(0.1),
             nn.Linear(10, 12),
             nn.ReLU(),
-            # nn.Dropout(0.1),
+            nn.Dropout(0.1),
             nn.Linear(12, 10),
             nn.ReLU(),
-            # nn.Dropout(0.1)
+            nn.Dropout(0.1)
         )
         self.fc_mean = nn.Linear(10, 1)
         self.fc_var = nn.Linear(10, 1)
@@ -58,9 +58,9 @@ class CAE(nn.Module):
         self.dec = nn.Sequential(
             nn.Linear(9, 6),
             nn.ReLU(),
-            # nn.Dropout(0.1),
+            nn.Dropout(0.1),
             # nn.Linear(12, 10),
-            nn.ReLU(),
+            # nn.ReLU(),
             # nn.Dropout(0.1),
             nn.Linear(6, 2)
         )

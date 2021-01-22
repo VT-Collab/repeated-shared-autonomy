@@ -37,36 +37,45 @@ class CAE(nn.Module):
 
         self.loss_func = nn.MSELoss()
         self.BETA = 0.001
-        self.lamda = 0.001
+        self.lamda = 10
 
         # Encoder
         self.enc = nn.Sequential(
             nn.Linear(10, 10),
             nn.Tanh(),
-            # nn.Dropout(0.1),
+            nn.Dropout(0.1),
             nn.Linear(10, 12),
             nn.Tanh(),
-            # nn.Dropout(0.1),
+            nn.Dropout(0.1),
             nn.Linear(12, 10),
             nn.Tanh(),
-            # nn.Dropout(0.1)
-            nn.Linear(10, 1)
+            nn.Dropout(0.1),
+            # nn.Linear(10, 10)
         )
-        # self.fc_mean = nn.Linear(10, 1)
-        # self.fc_var = nn.Linear(10, 1)
+        self.fc_mean = nn.Linear(10, 1)
+        self.fc_var = nn.Sequential(
+            nn.Linear(10, 1),
+            nn.Tanh()
+        )
 
         # Decoder
         self.dec = nn.Sequential(
             nn.Linear(9, 12),
             nn.Tanh(),
-            # nn.Dropout(0.1),
+            nn.Dropout(0.1),
             nn.Linear(12, 10),
             nn.Tanh(),
-            # nn.Dropout(0.1),
-            nn.Linear(10, 4)
+            nn.Dropout(0.1),
+            nn.Linear(10,10),
+            nn.Tanh(),
+            nn.Dropout(0.1),
+            nn.Linear(10, 2)
         )
         self.dec_mean = nn.Linear(4, 2)
-        self.dec_var = nn.Linear(4, 2)
+        self.dec_var = nn.Sequential(
+            nn.Linear(4, 2),
+            nn.Tanh()
+        )
 
     def reparam(self, mean, log_var):
         std = torch.exp(0.5*log_var)
@@ -74,11 +83,14 @@ class CAE(nn.Module):
         return mean + eps * std
 
     def encoder(self, x):
-        return self.enc(x)
+        # return self.enc(x)
+        h = self.enc(x)
+        return self.fc_mean(h), self.fc_var(h)
 
     def decoder(self, z_with_state):
-        a = self.dec(z_with_state)
-        return self.dec_mean(a), self.dec_var(a)
+        # a = self.dec(z_with_state)
+        # return self.dec_mean(a), self.dec_var(a)
+        return self.dec(z_with_state)
 
     def forward(self, x):
         c = x[0]
@@ -86,33 +98,40 @@ class CAE(nn.Module):
         ztrue = x[2] #this is the ground truth label, for use when trouble shooting
         a = x[3]
         y_true = x[4]
-        z = self.encoder(c)
+        # z = self.encoder(c)
+        # z_with_state = torch.cat((z, s), 1)
+        # mean, log_var = self.decoder(z_with_state)
+        # a_decoded = self.reparam(mean, log_var)
+        mean, log_var = self.encoder(c)
+        z = self.reparam(mean, log_var)
         z_with_state = torch.cat((z, s), 1)
-        a_mean, a_var = self.decoder(z_with_state)
-        a_decoded = self.reparam(a_mean, a_var)
-        loss = self.loss(a, a_decoded, a_mean, a_var, y_true)
+        a_decoded = self.decoder(z_with_state)
+        loss = self.loss(a, a_decoded, mean, log_var, y_true)
         return loss
 
     def loss(self, a_decoded, a_target, mean, log_var, y_true):
-       
         # Change true taj from 0 to 1
-        y_true_flipped = torch.abs(y_true - 1)
+        true_traj_idxs = torch.nonzero(y_true - 1)
+        false_traj_idxs = torch.nonzero(y_true)
 
-        # Set fake traj actions to zero
-        a_decoded = y_true_flipped.unsqueeze(1) * a_decoded 
-        a_target = y_true_flipped.unsqueeze(1) * a_target
-        mean = y_true_flipped.unsqueeze(1) * mean
-        log_var_flipped = y_true_flipped.unsqueeze(1) * log_var
+        a_decoded_true = a_decoded[true_traj_idxs]
+        a_target_true = a_target[true_traj_idxs]
+        mean_true = mean[true_traj_idxs]
+        log_var_true = log_var[true_traj_idxs]
 
-        rce = self.loss_func(a_decoded, a_target)
-        # kld = -0.5 * torch.sum(1 + log_var_flipped - mean.pow(2) - log_var_flipped.exp())
-        action_loss = rce# + kld
-        entropy = torch.sum(log_var)
+        entropy_true = torch.sum(torch.abs(log_var_true))
+        
+        log_var_false = log_var[false_traj_idxs]
+
+        rce = self.loss_func(a_decoded_true, a_target_true)
+        kld = -0.5 * torch.sum(1 + log_var_true - mean_true.pow(2) - log_var_true.exp())
+        action_loss = rce + self.BETA * kld
+        entropy_false = torch.sum(torch.abs(log_var_false))
 
         # Loss = MSE(action_true - policy_true) - entropy(fake)
-        total_loss = action_loss - self.lamda * entropy
+        total_loss = action_loss + .0001 * entropy_true + self.lamda / entropy_false
 
-        return total_loss, action_loss, entropy 
+        return total_loss, action_loss, entropy_true, entropy_false 
 
 # train cAE
 def main(num):
@@ -120,13 +139,13 @@ def main(num):
     model = CAE()
     model = model.to(device)
     dataname = 'data/dataset_with_fake_dist.pkl'
-    savename = "models/entropy_0001_" + str(num)
+    savename = "models/entropy_" + str(num)
     print(savename)
 
-    EPOCH = 1750
+    EPOCH = 2500
     BATCH_SIZE_TRAIN = 400
-    LR = 0.01
-    LR_STEP_SIZE = 1400
+    LR = 0.001
+    LR_STEP_SIZE = 2250
     LR_GAMMA = 0.1
 
 
@@ -143,12 +162,14 @@ def main(num):
     for epoch in range(EPOCH):
         for batch, x in enumerate(train_set):
             optimizer.zero_grad()
-            loss, action_loss, entropy = model(x)
+            loss, action_loss, entropy_true, entropy_false = model(x)
             loss.backward()
             optimizer.step()
         scheduler.step()
-        print("Epoch: {0:4d}    Loss: {1:2.3f}  Action_Loss: {2:2.3f}   Entropy: {3:2.3f}".\
-                    format(epoch, loss.item(), action_loss.item(), entropy.item()))
+        if epoch % 50 == 0:
+            print(\
+        "Epoch: {0:4d}    Loss: {1:2.3f}  A_Loss: {2:2.3f}   E_True: {3:2.1f}   E_False: {4:2.1f}".\
+            format(epoch, loss.item(), action_loss.item(), entropy_true.item(), entropy_false.item()))
     torch.save(model.state_dict(), savename)
 
 
