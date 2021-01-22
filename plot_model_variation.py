@@ -150,23 +150,17 @@ def main():
             z_mean_3 = z_mean_3[0]
             z_std_3 = z_std_3[0]
 
-            actions_1 = np.zeros((100, 2))
-            actions_2 = np.zeros((100, 2))
-            actions_3 = np.zeros((100, 2))
-            for idx in range(100):
-                z_1 = z_mean_1 + np.random.normal() * z_std_1
-                z_2 = z_mean_2 + np.random.normal() * z_std_2
-                z_3 = z_mean_3 + np.random.normal() * z_std_3
-                a_robot_1 = model.decoder([z_1], s_1)
-                a_robot_2 = model.decoder([z_2], s_2)
-                a_robot_3 = model.decoder([z_3], s_3)
-                actions_1[idx,:] = a_robot_1
-                actions_2[idx,:] = a_robot_2
-                actions_3[idx,:] = a_robot_3
-            # a_robot = np.mean(actions, axis=0)
-            heatmap_1[row,col] = np.std(actions_1)
-            heatmap_2[row,col] = np.std(actions_2)
-            heatmap_3[row,col] = np.std(actions_3)
+
+            z_1 = z_mean_1 + np.random.normal() * z_std_1
+            z_2 = z_mean_2 + np.random.normal() * z_std_2
+            z_3 = z_mean_3 + np.random.normal() * z_std_3
+            a_robot_1 = model.decoder([z_1], s_1)
+            a_robot_2 = model.decoder([z_2], s_2)
+            a_robot_3 = model.decoder([z_3], s_3)
+
+            heatmap_1[row,col] = 1/z_std_1
+            heatmap_2[row,col] = 1/z_std_2
+            heatmap_3[row,col] = 1/z_std_3
             # print(np.std(actions))
             col += 1
             # print(col)
@@ -199,7 +193,7 @@ def main():
     lines, labels = [sum(lol, []) for lol in zip(*lines_labels)]
     fig.legend(lines, labels)
 
-    plt.suptitle("Confidence heatmap (Lighter means lower confidence)")
+    plt.suptitle("Confidence heatmap (Lighter means higher confidence)")
     plt.tight_layout()
     plt.show()
 
