@@ -154,15 +154,15 @@ def main():
             a_robot = model.decoder([z], s)
             actions[idx,:] = a_robot
         a_robot = np.mean(actions, axis=0)
-        print("action std: ", np.std(actions))
+        print("action std: ", np.std(actions)/0.25)
 
-        beta = 100/np.std(actions)
+        beta = 0.25/np.std(actions)
 
         action, start, stop = joystick.input()
         if stop:
             pygame.quit(); sys.exit()
 
-        q += np.asarray(a_robot) * 0.003 + np.asarray(action) * 0.007
+        q += np.asarray(a_robot) *0.01 * beta  + np.asarray(action) * 0.01 *(1 - beta)
 
         # dynamics
         player.update(q)
