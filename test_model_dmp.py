@@ -40,7 +40,6 @@ class Model(object):
         s = torch.FloatTensor(s)
         y = s[6:8]
         action = (z - y) * BETA
-        # action = 0.5 * torch.div(action, z)
         return action
 
 class Joystick(object):
@@ -106,7 +105,7 @@ class Player(pygame.sprite.Sprite):
 
 def main():
 
-    name = "models/dmp_"
+    name = "models/dmp_ensemble_"
 
     clock = pygame.time.Clock()
     pygame.init()
@@ -115,7 +114,7 @@ def main():
     joystick = Joystick()
     # model = Model(modelname)
     models = []
-    for i in range(1,11):
+    for i in range(1,2):
         num = i
         modelname = name + str(num)
         print(modelname)
@@ -161,10 +160,8 @@ def main():
         s = obs_position + q.tolist()
         c = start_state + q.tolist()
         
-        # print("Z_mean: ",z_mean)
-        # print("Z_std: ",z_std)
         actions = np.zeros((10, 2))
-        for idx in range(0,10):
+        for idx in range(0,1):
             model = models[idx]
             z = model.encoder(c)
             a_robot = model.action(z, s)
@@ -178,7 +175,7 @@ def main():
         if stop:
             pygame.quit(); sys.exit()
 
-        q += np.asarray(a_robot) * 0.003 + np.asarray(action) * 0.007
+        q += np.asarray(a_robot) * 0.05 + np.asarray(action) * 0.005
 
         # dynamics
         player.update(q)

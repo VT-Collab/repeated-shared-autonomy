@@ -44,27 +44,20 @@ class CAE(nn.Module):
         super(CAE, self).__init__()
 
         self.loss_func = nn.MSELoss()
-        # self.ALPHA = 0.1
-        # self.BETA = 0.01
-        # self.TAU = 0.1
-        # self.t = 0.033 #time between data points (30fps => 1/30 sec)
-        # self.prev_y = torch.zeros(400, 2)
-        # self.prev_y_dot = torch.zeros(400, 2)
-        # avg action size [0.18212835 0.1767881 ]
-        self.action_magnitude = torch.FloatTensor([0.18, 0.17]).to(device)
 
         # Encoder
         self.enc = nn.Sequential(
             nn.Linear(10, 10),
-            nn.ReLU(),
+            nn.Tanh(),
             # nn.Dropout(0.1),
             nn.Linear(10, 12),
-            nn.ReLU(),
+            nn.Tanh(),
             # nn.Dropout(0.1),
             nn.Linear(12, 10),
-            nn.ReLU(),
+            nn.Tanh(),
             # nn.Dropout(0.1),
-            nn.Linear(10, 2)
+            nn.Linear(10, 2),
+            nn.Tanh()
         )
 
     def encoder(self, x):
@@ -86,8 +79,6 @@ class CAE(nn.Module):
     def action(self, z, s):
         y = s[:, 6:8]
         action = (z - y) * BETA
-        # action = 0.5 * torch.div(action, z)
-        # action = torch.clamp(action, -0.5, 0.5)
         return action
 
 # train cAE
@@ -116,8 +107,6 @@ def main(num):
             a_target = x[3]
             optimizer.zero_grad()
             loss = model(x)
-            # loss.detach_()
-            # loss = Variable(loss, requires_grad = True)
             loss.backward()
             optimizer.step()
         scheduler.step()
@@ -126,5 +115,5 @@ def main(num):
 
 
 if __name__ == "__main__":
-    for i in range(1,11):
+    for i in range(1,2):
         main(i)
