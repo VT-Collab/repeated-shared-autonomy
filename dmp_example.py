@@ -103,8 +103,6 @@ def main():
     pygame.init()
     fps = 30
 
-    joystick = Joystick()
-
     world = pygame.display.set_mode([700,700])
     position_player = np.random.random(2)
     postition_blue = np.random.random(2)
@@ -142,10 +140,6 @@ def main():
 
         q = np.asarray([player.x, player.y])
         s = obs_position + q.tolist()
-
-        # action, start, stop = joystick.input()
-        # if stop:
-        #     pygame.quit(); sys.exit()
 
         player_vel = player.get_vel()
         player_pos = player.get_pos()
