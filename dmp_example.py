@@ -6,7 +6,6 @@ import numpy as np
 import time
 import pickle
 
-
 class Joystick(object):
 
     def __init__(self):
@@ -60,20 +59,46 @@ class Player(pygame.sprite.Sprite):
         self.rect.x = (self.x * 500) + 100 - self.rect.size[0] / 2
         self.rect.y = (self.y * 500) + 100 - self.rect.size[1] / 2
 
+        self.prev_x = None
+        self.prev_y = None
+
+    def get_pos(self):
+        return [self.x, self.y]
+
+    def get_vel(self):
+        if self.prev_x == None:
+            return [0., 0.]
+        else:
+            return [self.x - self.prev_x, self.y - self.prev_y]
+
+
     def update(self, s):
         self.rect = self.image.get_rect(center=self.rect.center)
+        self.prev_x = self.x
+        self.prev_y = self.y
         self.x = s[0]
         self.y = s[1]
         self.rect.x = (self.x * 500) + 100 - self.rect.size[0] / 2
         self.rect.y = (self.y * 500) + 100 - self.rect.size[1] / 2
 
+def get_acc(goal, y, y_dot):
+    beta = 0.01
+    alpha = 1.0
+    t = 1/30.
+
+    y_ddot = [0., 0.]
+
+    y_ddot[0] = alpha * (beta * (goal[0] - y[0]) - y_dot[0])
+    y_ddot[1] = alpha * (beta * (goal[1] - y[1]) - y_dot[1])
+
+    y_dot[0] = y_dot[0] + y_ddot[0] * t
+    y_dot[1] = y_dot[1] + y_ddot[1] * t
+    return y_dot
 
 def main():
 
-    filename = sys.argv[1]
-    savename = "data/demos/" + filename + ".pkl"
-
-
+    goal_color = int(sys.argv[1])
+    # print(goal_color)
     clock = pygame.time.Clock()
     pygame.init()
     fps = 30
@@ -118,16 +143,19 @@ def main():
         q = np.asarray([player.x, player.y])
         s = obs_position + q.tolist()
 
-        action, start, stop = joystick.input()
-        print(action)
-        if stop:
-            # pickle.dump( demonstration, open( savename, "wb" ) )
-            print(demonstration)
-            print("[*] Done!")
-            print("[*] I recorded this many datapoints: ", len(demonstration))
-            pygame.quit(); sys.exit()
+        # action, start, stop = joystick.input()
+        # if stop:
+        #     pygame.quit(); sys.exit()
 
-        q += np.asarray(action) * 0.01
+        player_vel = player.get_vel()
+        player_pos = player.get_pos()
+
+        if goal_color == 0:
+            action = get_acc(postition_blue, player_pos, player_vel)
+        elif goal_color == 1:
+            action = get_acc(postition_green, player_pos, player_vel)
+        
+        q += np.asarray(action)
 
         # dynamics
         player.update(q)
