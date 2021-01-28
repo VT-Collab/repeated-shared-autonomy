@@ -1,4 +1,3 @@
-import pygame
 import sys
 import os
 import math
@@ -18,33 +17,17 @@ class Model(object):
         model_dict = torch.load(modelname, map_location='cpu')
         self.model.load_state_dict(model_dict)
         self.model.eval
-        # self.enable_dropout()
-
-    def enable_dropout(self):
-        for m in self.model.modules():
-            if m.__class__.__name__.startswith('Dropout'):
-                m.train()
 
     def classify(self, x):
         labels = self.model.classifier(x)
         return F.softmax(labels, dim=0)
 
-    def forward(self, x):
-        c = torch.FloatTensor(x[0])
-        s = x[1]
-        c_output = self.classify(c)
-        c_true = x[4]
-        loss = self.loss(c_output, c_true)
-        return loss
-
-    def loss(self, output, target):
-        return self.loss_func(output, target)
-
 def main():
 
-    modelname = "models/classifier_dist"
+    modelname = "models/classifier_high_sigma"
     model = Model(modelname)
     
+    # Generate 3 sets of random goal + start positions
     positions_blue = []
     positions_green = []
     obs_positions = []
@@ -66,8 +49,8 @@ def main():
         start_state = obs_position + position_player
         obs_positions.append(obs_position)
         start_states.append(start_state)
-    
 
+    # Generate heatmap
     row = 0
     scale = 30
     heatmap_1 = np.zeros((scale, scale))
@@ -92,10 +75,6 @@ def main():
             z_2 = model.classify(torch.FloatTensor(c_2))
             z_3 = model.classify(torch.FloatTensor(c_3))
 
-            # label_1, _ = torch.max(z_1.data, 0)
-            # label_2, _ = torch.max(z_2.data, 0)
-            # label_3, _ = torch.max(z_3.data, 0)
-
             label_1 = z_1.data
             label_2 = z_2.data
             label_3 = z_3.data
@@ -108,6 +87,7 @@ def main():
 
         row += 1
 
+    # Plotting
     fig, axs = plt.subplots(1, 3, figsize=(9, 3), sharey=True)
     i = 0
     for ax in axs:
