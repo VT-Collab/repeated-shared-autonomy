@@ -31,28 +31,21 @@ class MotionData(Dataset):
         return (snippet, state, true_z, action, label)
 
 
-# conditional autoencoder
+# Classifier
 class Net(nn.Module):
 
     def __init__(self):
         super(Net, self).__init__()
 
         self.loss_func = nn.CrossEntropyLoss()
-        # self.loss_func = nn.MSELoss()
-
-        # Classifier
         self.classifier = nn.Sequential(
             nn.Linear(10, 10),
             nn.Tanh(),
-            # nn.Dropout(0.1),
             nn.Linear(10, 12),
             nn.Tanh(),
-            # nn.Dropout(0.1),
             nn.Linear(12, 10),
             nn.Tanh(),
-            # nn.Dropout(0.1),
             nn.Linear(10, 2),
-            # nn.Softmax(dim=1)
         )
 
     def classify(self, x):
@@ -67,17 +60,16 @@ class Net(nn.Module):
         return loss
 
     def loss(self, output, target):
-        # output = torch.cat((output, 1-output), dim=1)
         return self.loss_func(output, target)
 
 
-# train cAE
+# train classifier
 def main():
 
     model = Net()
     model = model.to(device)
-    dataname = 'data/dataset_with_fake_dist.pkl'
-    savename = "models/classifier_dist"
+    dataname = 'data/dataset_low_sigma.pkl'
+    savename = "models/classifier_low_sigma"
 
     EPOCH = 1500
     BATCH_SIZE_TRAIN = 400
