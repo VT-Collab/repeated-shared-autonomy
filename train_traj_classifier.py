@@ -39,7 +39,7 @@ class Net(nn.Module):
 
         self.loss_func = nn.CrossEntropyLoss()
         self.classifier = nn.Sequential(
-            nn.Linear(10, 12),
+            nn.Linear(12, 12),
             nn.Tanh(),
             # nn.Linear(14, 14),
             # nn.Tanh(),
@@ -70,7 +70,7 @@ def main():
 
     model = Net()
     model = model.to(device)
-    dataname = 'data/dataset_med_sigma.pkl'
+    dataname = 'data/dataset_traj.pkl'
     savename = "models/classifier_traj"
 
     EPOCH = 1500
