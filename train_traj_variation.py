@@ -41,7 +41,7 @@ class CAE(nn.Module):
 
         # Encoder
         self.enc = nn.Sequential(
-            nn.Linear(10, 10),
+            nn.Linear(12, 10),
             nn.Tanh(),
             nn.Linear(10, 12),
             nn.Tanh(),
@@ -94,8 +94,8 @@ def main():
 
     model = CAE()
     model = model.to(device)
-    dataname = 'data/dataset.pkl'
-    savename = "models/vae_1"
+    dataname = 'data/dataset_traj.pkl'
+    savename = "models/vae_traj_1"
     print(savename)
 
     EPOCH = 2000
