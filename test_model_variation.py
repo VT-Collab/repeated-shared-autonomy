@@ -5,7 +5,7 @@ import math
 import numpy as np
 import time
 import pickle
-from train_entropy import CAE
+from train_model_variation import CAE
 import torch
 import copy
 
@@ -96,7 +96,7 @@ class Player(pygame.sprite.Sprite):
 
 def main():
 
-    modelname = "models/entropy_1"
+    modelname = "models/vae_1"
 
     clock = pygame.time.Clock()
     pygame.init()

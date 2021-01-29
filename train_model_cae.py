@@ -40,13 +40,13 @@ class CAE(nn.Module):
         self.enc = nn.Sequential(
             nn.Linear(10, 10),
             nn.Tanh(),
-            nn.Dropout(0.1),
+            # nn.Dropout(0.1),
             nn.Linear(10, 12),
             nn.Tanh(),
-            nn.Dropout(0.1),
+            # nn.Dropout(0.1),
             nn.Linear(12, 10),
             nn.Tanh(),
-            nn.Dropout(0.1),
+            # nn.Dropout(0.1),
             nn.Linear(10, 1)
         )
 
@@ -54,7 +54,7 @@ class CAE(nn.Module):
         self.dec = nn.Sequential(
             nn.Linear(9, 12),
             nn.Tanh(),
-            nn.Dropout(0.1),
+            # nn.Dropout(0.1),
             nn.Linear(12, 10),
             nn.Tanh(),
             nn.Linear(10, 2)
@@ -82,12 +82,12 @@ class CAE(nn.Module):
 
 
 # train cAE
-def main(num):
+def main():
 
     model = CAE()
     model = model.to(device)
     dataname = 'data/dataset.pkl'
-    savename = "models/cae_ensemble_dropout_" + str(num)
+    savename = "models/cae_1" + str(num)
 
     EPOCH = 2000
     BATCH_SIZE_TRAIN = 400
@@ -113,5 +113,4 @@ def main(num):
 
 
 if __name__ == "__main__":
-    for i in range(1,11):
-        main(i)
+    main()
