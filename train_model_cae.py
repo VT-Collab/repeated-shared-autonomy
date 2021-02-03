@@ -87,7 +87,7 @@ def main():
     model = CAE()
     model = model.to(device)
     dataname = 'data/dataset.pkl'
-    savename = "models/cae_1" + str(num)
+    savename = "models/cae_1"
 
     EPOCH = 2000
     BATCH_SIZE_TRAIN = 400
