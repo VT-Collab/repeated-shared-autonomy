@@ -1,13 +1,48 @@
+import socket
+import time
+import numpy as np
+import pickle
 import pygame
 import sys
-import os
-import math
-import numpy as np
-import time
-import pickle
-from train_model_variation import CAE
+
 import torch
-import copy
+import torch.nn as nn
+import cv2
+sys.path.insert(0, './yolov5')
+
+from yolov5.models.experimental import attempt_load
+from yolov5.utils.general import non_max_suppression, xyxy2xywh
+from yolov5.utils.datasets import letterbox
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+# Clear GPU memory from previous runs
+torch.cuda.empty_cache()
+
+from train_model_variation import CAE
+
+
+class YOLODetector(nn.Module):
+    def __init__(self, load_path):
+        super(YOLODetector, self).__init__()
+        self.yolo = attempt_load(load_path, map_location=device)
+        self.n_classes = len(self.yolo.names)
+        self.to(device)
+
+    def get_object_features(self, img):
+        pred, _ = self.yolo(img, augment=False)
+        pred = non_max_suppression(pred, conf_thres=0.4, iou_thres=0.25, agnostic=True)[0]
+        if pred is None:
+            return None
+        obj_feats = []
+        for object in pred:
+            cls = int(object[5])
+            xywh = (xyxy2xywh(object[:4].view(1, 4) / img.shape[-1]))
+            obj_feat = torch.cat([xywh[0, :2],
+                        torch.nn.functional.one_hot(torch.tensor(cls),
+                        num_classes=self.n_classes).float().to(device)])
+            obj_feats.append(obj_feat.tolist())
+        return obj_feats
 
 
 class Model(object):
@@ -17,15 +52,10 @@ class Model(object):
         model_dict = torch.load(modelname, map_location='cpu')
         self.model.load_state_dict(model_dict)
         self.model.eval
-        self.enable_dropout()
 
-    def enable_dropout(self):
-        for m in self.model.modules():
-            if m.__class__.__name__.startswith('Dropout'):
-                m.train()
-
-    def encoder(self, c):
-        z_mean, z_log_var = self.model.encoder(torch.FloatTensor(c))
+    def encoder(self, context):
+        context = torch.FloatTensor(context)
+        z_mean, z_log_var = self.model.encoder(context)
         return z_mean.tolist(), torch.exp(0.5*z_log_var).tolist()
 
     def decoder(self, z, s):
@@ -33,135 +63,179 @@ class Model(object):
         a_predicted = self.model.decoder(z_tensor)
         return a_predicted.data.numpy()
 
+
 class Joystick(object):
 
     def __init__(self):
+        pygame.init()
         self.gamepad = pygame.joystick.Joystick(0)
         self.gamepad.init()
-        self.DEADBAND = 0.1
+        self.deadband = 0.1
+        self.timeband = 0.5
+        self.lastpress = time.time()
 
     def input(self):
         pygame.event.get()
-        z1 = self.gamepad.get_axis(0)
-        if abs(z1) < self.DEADBAND:
-            z1 = 0.0
-        z2 = self.gamepad.get_axis(1)
-        if abs(z2) < self.DEADBAND:
-            z2 = 0.0
-        start = self.gamepad.get_button(1)
-        stop = self.gamepad.get_button(0)
-        return [z1, z2], start, stop
+        curr_time = time.time()
+        dx = self.gamepad.get_axis(0)
+        dy = -self.gamepad.get_axis(1)
+        dz = -self.gamepad.get_axis(4)
+        if abs(dx) < self.deadband:
+            dx = 0.0
+        if abs(dy) < self.deadband:
+            dy = 0.0
+        if abs(dz) < self.deadband:
+            dz = 0.0
+        A_pressed = self.gamepad.get_button(0) and (curr_time - self.lastpress > self.timeband)
+        START_pressed = self.gamepad.get_button(7) and (curr_time - self.lastpress > self.timeband)
+        if A_pressed or START_pressed:
+            self.lastpress = curr_time
+        return [dx, dy, dz], A_pressed, START_pressed
 
 
-class Object(pygame.sprite.Sprite):
+def connect2robot(PORT):
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    s.bind(('172.16.0.3', PORT))
+    s.listen()
+    conn, addr = s.accept()
+    return conn
 
-    def __init__(self, position, color):
+def send2robot(conn, qdot, limit=1.0):
+    qdot = np.asarray(qdot)
+    scale = np.linalg.norm(qdot)
+    if scale > limit:
+        qdot = np.asarray([qdot[i] * limit/scale for i in range(7)])
+    send_msg = np.array2string(qdot, precision=5, separator=',',suppress_small=True)[1:-1]
+    send_msg = "s," + send_msg + ","
+    conn.send(send_msg.encode())
 
-        # create sprite
-        pygame.sprite.Sprite.__init__(self)
-        self.image = pygame.Surface((25,25))
-        self.image.fill(color)
-        self.rect = self.image.get_rect()
+def listen2robot(conn):
+    state_length = 7 + 7 + 7 + 42
+    message = str(conn.recv(2048))[2:-2]
+    state_str = list(message.split(","))
+    for idx in range(len(state_str)):
+        if state_str[idx] == "s":
+            state_str = state_str[idx+1:idx+1+state_length]
+            break
+    try:
+        state_vector = [float(item) for item in state_str]
+    except ValueError:
+        return None
+    if len(state_vector) is not state_length:
+        return None
+    state_vector = np.asarray(state_vector)
+    state = {}
+    state["q"] = state_vector[0:7]
+    state["dq"] = state_vector[7:14]
+    state["tau"] = state_vector[14:21]
+    state["J"] = state_vector[21:].reshape((7,6)).T
+    return state
 
-        # initial conditions
-        self.x = position[0]
-        self.y = position[1]
-        self.rect.x = (self.x * 500) + 100 - self.rect.size[0] / 2
-        self.rect.y = (self.y * 500) + 100 - self.rect.size[1] / 2
+def readState(conn):
+    while True:
+        state = listen2robot(conn)
+        if state is not None:
+            break
+    return state
 
+def xdot2qdot(xdot, state):
+    J_pinv = np.linalg.pinv(state["J"])
+    return J_pinv @ np.asarray(xdot)
 
-class Player(pygame.sprite.Sprite):
-
-    def __init__(self, position):
-
-        # create sprite
-        pygame.sprite.Sprite.__init__(self)
-        self.image = pygame.Surface((50,50))
-        self.image.fill((255, 128, 0))
-        self.rect = self.image.get_rect()
-
-        # initial conditions
-        self.x = position[0]
-        self.y = position[1]
-        self.rect.x = (self.x * 500) + 100 - self.rect.size[0] / 2
-        self.rect.y = (self.y * 500) + 100 - self.rect.size[1] / 2
-
-    def update(self, s):
-        self.rect = self.image.get_rect(center=self.rect.center)
-        self.x = s[0]
-        self.y = s[1]
-        self.rect.x = (self.x * 500) + 100 - self.rect.size[0] / 2
-        self.rect.y = (self.y * 500) + 100 - self.rect.size[1] / 2
 
 
 def main():
 
-    modelname = "models/vae_1"
+    image_width = 640
+    image_heigth = 640
 
-    clock = pygame.time.Clock()
-    pygame.init()
-    fps = 30
+    print('[*] Loading Pre-Trained YOLO-v5 Detector...')
+    yolo_model = "yolov5/weights/best.pt"
+    detector = YOLODetector(yolo_model)
 
-    joystick = Joystick()
-    model = Model(modelname)
+    print('[*] Setting up WebCam Feed...')
+    vc = cv2.VideoCapture(0)
+    vc.set(cv2.CAP_PROP_BUFFERSIZE, 3)
+    assert vc.isOpened(), "Webcam doesn't appear to be online!"
 
-    world = pygame.display.set_mode([700,700])
-    position_player = np.random.random(2)
-    postition_blue = np.random.random(2)
-    postition_green = np.random.random(2)
-    postition_gray = np.random.random(2)
-    obs_position = postition_blue.tolist() + postition_green.tolist() + postition_gray.tolist()
+    print('[*] Extracting Object Features...')
+    while True:
+        # read image from webcam
+        all_ok, img_raw = vc.read()
+        assert all_ok, "Webcam stopped working?"
+        # preprocess image for yolov5
+        img_raw = letterbox(img_raw, new_shape=(image_width, image_heigth))[0]
+        img = img_raw[:, :, ::-1].copy()                # BGR to RGB
+        img = img / 256.0                               # Normalize to [0, 1]
+        img = np.transpose(img, (2, 0, 1))              # Channel axis first
+        img = torch.FloatTensor([img]).to(device)
+        # get object position and class
+        obj_feat = detector.get_object_features(img)
+        if obj_feat is not None:
+            break
 
-    player = Player(position_player)
-    blue = Object(postition_blue, [0, 0, 255])
-    green = Object(postition_green, [0, 255, 0])
-    gray = Object(postition_gray, [128, 128, 128])
+    print('[*] Visualizing the Object Features...')
+    context = [0] * 4
+    for object in obj_feat:
+        if object[3]:
+            print('[*] I see a VT notepad')
+            obj_xy = (int(object[0] * image_width), int(object[1] * image_heigth))
+            context[0] = object[0] - 0.5
+            context[1] = object[1] - 0.5
+            cv2.circle(img_raw, obj_xy, 25, (0, 0, 255), 10)
+        elif object[4]:
+            print('[*] I see a can of soup')
+            obj_xy = (int(object[0] * image_width), int(object[1] * image_heigth))
+            context[2] = object[0] - 0.5
+            context[3] = object[1] - 0.5
+            cv2.circle(img_raw, obj_xy, 25, (0, 255, 0), 10)
+    print('[*] Here is the current context: ', context)
+    cv2.imshow('frame', img_raw)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
 
-    sprite_list = pygame.sprite.Group()
-    sprite_list.add(player)
-    sprite_list.add(blue)
-    sprite_list.add(green)
-    sprite_list.add(gray)
 
-    world.fill((0,0,0))
-    sprite_list.draw(world)
-    pygame.display.flip()
-    clock.tick(fps)
+    print('[*] Connecting to low-level controller...')
+    PORT = 8080
+    conn = connect2robot(PORT)
+    interface = Joystick()
+    model = Model("models/vae_model_r")
 
-    start_state = obs_position + position_player.tolist()
+    print('[*] Initializing recording...')
+    BETA = 1.0  # human in charge
+    action_scale = 0.1
+    state = readState(conn)
+    home = context + state["q"].tolist()
 
+    print('[*] Main loop...')
     while True:
 
-        q = np.asarray([player.x, player.y])
-        s = obs_position + q.tolist()
-        c = start_state + q.tolist()
-        z_mean, z_std = model.encoder(c)
+        state = readState(conn)
+        s = context + state["q"].tolist()
+
+        z_mean, z_std = model.encoder(home + state["q"].tolist())
         z_mean = z_mean[0]
         z_std = z_std[0]
-        actions = np.zeros((100, 2))
-        for idx in range(100):
-            z = z_mean + np.random.normal() * z_std
-            a_robot = model.decoder([z], s)
-            actions[idx,:] = a_robot
-        a_robot = np.mean(actions, axis=0)
-        print("action std: ", np.std(actions)/0.25)
 
-        beta = 0.25/np.std(actions)
+        qdot_r = model.decoder([z_mean], s)
 
-        action, start, stop = joystick.input()
+        u, start, stop = interface.input()
         if stop:
-            pygame.quit(); sys.exit()
+            print("[*] Done!")
+            return True
+        if start:
+            BETA = 0.0
+            print('[*] Robot taking over...')
 
-        q += np.asarray(a_robot) *0.01 * beta  + np.asarray(action) * 0.01 *(1 - beta)
+        xdot = [0]*6
+        xdot[0] = action_scale * u[0]
+        xdot[1] = action_scale * u[1]
+        xdot[2] = action_scale * u[2]
 
-        # dynamics
-        player.update(q)
-
-        # animate
-        world.fill((0,0,0))
-        sprite_list.draw(world)
-        pygame.display.flip()
-        clock.tick(fps)
+        qdot_h = xdot2qdot(xdot, state)
+        qdot = (1.0 - BETA) * qdot_r + BETA * qdot_h
+        send2robot(conn, qdot)
 
 
 if __name__ == "__main__":

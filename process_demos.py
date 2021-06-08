@@ -4,33 +4,31 @@ import sys
 import os
 import numpy as np
 
+
 def main():
 
     dataset = []
     folder = 'data/demos'
-    savename = 'data/dataset_low_sigma.pkl'
-    scale = 10.0
+    savename = 'data/dataset.pkl'
+    lookahead = 5
+    noiselevel = 0.05
+    noisesamples = 5
+
     for filename in os.listdir(folder):
         traj = pickle.load(open(folder + "/" + filename, "rb"))
         n_states = len(traj)
-        if filename[0] == 'b':
-            z = 1
+        if filename[0] == 'r':
+            z = [1.0]
         else:
-            z = 0
+            z = [-1.0]
         home_state = traj[0]
-        for idx in range(n_states-1):
-            position = np.asarray(traj[idx])[6:8]
-            action = scale * (np.asarray(traj[idx + 1])[6:8] - position)
-            traj_type = 0
-            dataset.append((home_state + position.tolist(),\
-                             traj[idx], [z], action.tolist(), traj_type))
-            # Fake data
-            traj_type = 1
-            covariance = [[0.05, 0], [0, 0.05]]
-            position = np.random.multivariate_normal(position, covariance)
-
-            dataset.append((home_state + position.tolist(),\
-                             traj[idx], [z], action.tolist(), traj_type))
+        for idx in range(n_states-lookahead):
+            obj_features = np.asarray(traj[idx])[0:4]
+            position = np.asarray(traj[idx])[4:]
+            nextposition = np.asarray(traj[idx + lookahead])[4:]
+            for jdx in range(noisesamples):
+                action = nextposition - (position + np.random.normal(0, noiselevel, 7))
+                dataset.append((home_state + position.tolist(), obj_features.tolist() + position.tolist(), z, action.tolist()))
 
     pickle.dump(dataset, open(savename, "wb"))
     print(dataset)
