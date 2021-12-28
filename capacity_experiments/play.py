@@ -210,13 +210,12 @@ def go2home(conn):
         return False
 
 def main():
-    user = sys.argv[1]
-    filename = sys.argv[2]
-    demos = sys.argv[3]
-    demos_savename = "user/user" + str(user) + "/demos/" + str(filename) + ".pkl"
-    data_savename = "user/user" + str(user) + "/runs/" + str(filename) + ".pkl"
-    cae_model = 'models/user' + str(user) + '_cae_' + str(demos)
-    class_model = 'models/user' + str(user) + '_class_' + str(demos)
+    filename = sys.argv[1]
+    tasks = sys.argv[2]
+    demos_savename = "demos/" + str(filename) + ".pkl"
+    data_savename = "runs/" + str(filename) + ".pkl"
+    cae_model = 'models/' + '0_cae_' + str(tasks)
+    class_model = 'models/' + '0_class_' + str(tasks)
     model = Model(class_model, cae_model)
     print('[*] Connecting to low-level controller...')
     PORT = 8080
