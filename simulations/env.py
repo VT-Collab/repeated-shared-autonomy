@@ -3,7 +3,7 @@ import numpy as np
 import pybullet as p
 import pybullet_data
 from panda import Panda
-from objects import YCBObject, InteractiveObj, RBOObject
+# from objects import YCBObject, InteractiveObj, RBOObject
 
 
 class SimpleEnv():
@@ -27,9 +27,9 @@ class SimpleEnv():
         # load a panda robot
         self.panda = Panda([0, -0.6, 0])
 
-    def reset(self, q=[0.3, 0.9, 0.5, -2*np.pi/4, 0.0, np.pi/2, np.pi/4]):
+    def reset(self, q=[0.0, 0.0, 0.0, -2*np.pi/4, 0.0, np.pi/2, np.pi/4]):
         self.panda.reset(q)
-        return [self.panda1.state]
+        return [self.panda.state]
 
     def close(self):
         p.disconnect()
