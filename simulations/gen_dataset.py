@@ -32,7 +32,7 @@ def main():
     for goal in range (num_goals):
         print("GOAL NUMBER ", goal)
         for demo in range (5):
-            file_name = "Demos/" + str(goal+1) + "_" + str(demo+1) + "pkl"
+            file_name = "demos/" + str(goal+1) + "_" + str(demo+1) + "pkl"
             state = env.reset()
             state = state[-1]
             ee_pose = np.asarray(state['ee_position'])
@@ -44,8 +44,8 @@ def main():
             x_traj = np.linspace(ee_pose[0], x_target, n_waypoints)
             y_traj = np.linspace(ee_pose[1], y_target, n_waypoints)
             z_traj = np.linspace(ee_pose[2], z_target, n_waypoints)
-            trajectory = np.array([x_traj, y_traj, z_traj])
-            # print(trajectory)
+            trajectory = np.column_stack((x_traj, y_traj, z_traj))
+            print(trajectory)
 
             pickle.dump(trajectory, open(file_name, "wb"))
 
