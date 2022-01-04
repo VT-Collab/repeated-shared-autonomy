@@ -82,7 +82,7 @@ class Panda():
 
     def _velocity_control(self, mode, djoint, dposition, dquaternion, grasp_open):
         if mode:
-            self.desired['ee_position'] = np.asarray(dposition)
+            self.desired['ee_position'] = np.asarray(self.state['ee_position']) + np.asarray(dposition)
             self.desired['ee_quaternion'] += np.asarray(dquaternion) / 240.0
             q_dot = self._inverse_kinematics(self.desired['ee_position'], self.desired['ee_quaternion']) - self.state['joint_position']
         else:
