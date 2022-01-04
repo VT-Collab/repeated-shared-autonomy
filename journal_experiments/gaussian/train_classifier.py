@@ -46,7 +46,7 @@ class Net(nn.Module):
 
         # Encoder
         self.classifier = nn.Sequential(
-            nn.Linear(6, 7),
+            nn.Linear(9, 7),
             nn.Tanh(),
             # nn.Dropout(0.1),
             # nn.Linear(14, 20),
@@ -132,24 +132,21 @@ def main():
 
     savename = 'data/' + '0_class_' + str(tasks) + '.pkl'
     for filename in os.listdir(folder):
-        traj = pickle.load(open(folder + "/" + filename, "rb"))
+        demo = pickle.load(open(folder + "/" + filename, "rb"))
+        traj = [item[0] for item in demo]
+        action = [item[1] for item in demo]
         n_states = len(traj)
         z = [1.0]
-
-        for idx in range(n_states-lookahead):
+        for idx in range(n_states):
             home_state = traj[idx][:3]
             position = traj[idx][3:]
-            nextposition = traj[idx + lookahead][3:]
-            action = nextposition - (position + np.random.normal(0, noiselevel, 3))
             traj_type = 0
-            dataset.append((home_state + position, position, z, action.tolist(), traj_type))
+            dataset.append((home_state + position + action[idx], position, z, action[idx], traj_type))
             true_cnt += 1
-
         snippets = np.array_split(traj, 2)
-        # snippets = [traj]
         deformed_samples = 2
         for snip in snippets:
-            tau = np.random.uniform([-0.08]*3, [0.08]*3)
+            tau = np.random.uniform([-0.05]*3, [0.05]*3)
             deform_len = len(snip)
             # print(deform_len)
             start = 0
@@ -162,9 +159,8 @@ def main():
                     home_state = snip[idx][:3].tolist()
                     position = snip[idx][3:] 
                     #position = position + np.random.normal(0, noiselevel, 7)
-                    action = 0
                     traj_type = 1
-                    dataset.append((home_state + position.tolist(), position.tolist(), z, action, traj_type))
+                    dataset.append((home_state + position.tolist() + action[idx], position.tolist(), z, action[idx], traj_type))
                     false_cnt += 1
                     # print(dataset[-1])
     pickle.dump(dataset, open(savename, "wb"))

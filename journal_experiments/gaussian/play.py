@@ -5,7 +5,7 @@ import pickle
 import pygame
 import sys
 import random
-
+import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
 from train_cae import CAE
@@ -19,14 +19,11 @@ torch.cuda.empty_cache()
 
 
 # Storing some important states
-# HOME = np.asarray([-0.000453, -0.7853, 0.000176, -2.355998, -0.000627, 1.572099, 0.7859])
 HOME = np.asarray([0.022643, -0.789077, -0.000277, -2.358605, -0.005446, 1.573151, -0.708887])
-# HOME = np.asarray([0.066701, -0.61756, 0.041429, -1.712728, -0.003661, 1.092369, -0.671616])
-SOUPCAN = [np.asarray([-0.305573, 0.70963, -0.183403, -1.500632, 0.13223, 2.214831, 0.270835])]
-NOTEPAD = [np.asarray([0.344895, 0.796234, 0.227432, -1.514207, -0.195541, 2.286966, 1.421964])]
-# CUP = [np.asarray([-0.169027, 0.119563, -0.662496, -2.628833, 0.120918, 2.729636, -0.146264])]
-TAPE = [np.asarray([-0.016421, 0.210632, 0.031353, -2.594983, 0.020064, 2.816127, 0.877912])]
-CUP = [np.asarray([-0.013822, 0.852029, 0.058359, -1.310726, -0.054624, 2.162042, 0.835634])]
+GOAL_D = np.asarray([0.50, 0.02665257, 0.25038403])
+SIGMA_D = np.asarray([[0.01, 0, 0], [0,0.01,0], [0,0,0.01]])
+
+GOAL_H = np.asarray([0.50, 0.02665257, 0.25038403])
 Q_MAX = [2.8, 1.7, 2.8, -0.75, 2.8, 3.7, 2.8]
 Q_MIN = [-2.8, -1.7, -2.8, -3.0, -2.8, 0.0, -2.8]
 
@@ -171,10 +168,6 @@ def xdot2qdot(xdot, state):
 
 def go2home(conn):
     home = np.copy(HOME)
-    # home[0] += np.random.uniform(-np.pi/8, np.pi/8)
-    # home[1] += np.random.uniform(-np.pi/16, np.pi/16)
-    # home[2] += np.random.uniform(-np.pi/16, np.pi/16)  
-
     total_time = 35.0;
     start_time = time.time()
     state = readState(conn)
@@ -209,7 +202,7 @@ def go2home(conn):
     elif elapsed_time >= total_time:
         return False
 
-def main():
+def run(conn, interface, gx):
     filename = sys.argv[1]
     tasks = sys.argv[2]
     demos_savename = "demos/" + str(filename) + ".pkl"
@@ -217,12 +210,7 @@ def main():
     cae_model = 'models/' + '0_cae_' + str(tasks)
     class_model = 'models/' + '0_class_' + str(tasks)
     model = Model(class_model, cae_model)
-    print('[*] Connecting to low-level controller...')
-    PORT = 8080
-    conn = connect2robot(PORT)
-    interface = Joystick()
-
-    print('[*] Initializing recording...')
+    # print('[*] Initializing recording...')
     demonstration = []
     data = []
     record = False
@@ -231,54 +219,56 @@ def main():
     scaling_trans = 0.1
     scaling_rot = 0.2
     assist = False
-    assist_start = 3.
     steptime = 0.1
 
-    print('[*] Main loop...')
+    # print('[*] Main loop...')
     go2home(conn)
-    print('[*] Waiting for start...')
+    # print('[*] Waiting for start...')
     state = readState(conn)
     start_q = state["q"].tolist()
     start_pose = joint2pose(start_q)
-    assist_start = 2.
+    assist_start = 1.
+    gstar = np.asarray([gx, 0.02665257, 0.25038403])
+    goal = np.random.multivariate_normal(GOAL_D, SIGMA_D)
+    start_time = time.time()
+    assist_time = time.time()
+    prev_pose = np.zeros(3)
+    dist = 1
+    qdot = [0.01]*7
     while True:
 
         state = readState(conn)
         s = state["q"].tolist()
+        pose = joint2pose(state["q"])
 
         u, start, mode, stop = interface.input()
-        if stop:
+        if stop or np.sum(np.abs(qdot)) < 0.05:
             # pickle.dump( demonstration, open( demos_savename, "wb" ) )
             # pickle.dump(data, open( data_savename, "wb" ) )
-            print(data[0])
-            print("[*] Done!")
-            print("[*] I recorded this many datapoints: ", len(demonstration))
-            return True
-        
-        if start and not record:
-            record = True
-            start_time = time.time()
-            assist_time = time.time()
-            print('[*] Recording the demonstration...')
+            # print(data[0])
+            # print("[*] Done!")
+            # print("[*] I recorded this many datapoints: ", len(demonstration))
+            return pose
 
         xdot_h = np.zeros(6)
-        xdot_h[:3] = scaling_trans * np.asarray(u)
-
+        # xdot_h[:3] = scaling_trans * np.asarray(u)
+        xdot_h[:3] =  np.clip((gstar - pose), -0.1, 0.1)
         x_pos = joint2pose(state["q"])
 
-        alpha = model.classify(start_pose.tolist() + x_pos.tolist())
+        alpha = model.classify(start_pose.tolist() + x_pos.tolist() + xdot_h[:3].tolist())
+        alpha = min(alpha, 0.85)
         z = model.encoder(start_pose.tolist() + x_pos.tolist())
-        a_robot = model.decoder(z, x_pos.tolist())
+        # a_robot = model.decoder(z, x_pos.tolist())
         xdot_r = np.zeros(6)
-        xdot_r[:3] = a_robot
+        xdot_r[:3] = np.clip((goal - pose), -0.1, 0.1)
         
         curr_time = time.time()
-        if record and curr_time - assist_time >= assist_start and not assist:    
-            print("[*] Assistance started...")
+        if curr_time - assist_time >= assist_start and not assist:    
+            # print("[*] Assistance started...")
             assist = True
 
         if assist:
-            xdot = alpha * 5.0 * xdot_r + (1 - alpha) * xdot_h 
+            xdot = alpha * xdot_r + (1 - alpha) * xdot_h 
         else:
             xdot = xdot_h
 
@@ -288,7 +278,7 @@ def main():
         qdot = xdot2qdot(xdot, state)
         qdot = qdot.tolist()
         
-        if record and curr_time - start_time >= steptime:
+        if curr_time - start_time >= steptime:
             s = state["q"].tolist()
             demonstration.append(start_q + s)
             elapsed_time = curr_time - assist_time
@@ -296,9 +286,29 @@ def main():
             qdot_r = xdot2qdot(xdot_r, state).tolist()
             data.append([elapsed_time] + [s] + [qdot_h] + [qdot_r] + [float(alpha)])
             start_time = curr_time
-            print(float(alpha))
+            # print(float(alpha))
+        try:
+            send2robot(conn, state, qdot)
+        except:
+            qdot = [0] * 6
+            print("[*] Hit joint limits, resetting")
 
-        send2robot(conn, state, qdot)
+def main():
+    print('[*] Connecting to low-level controller...')
+    PORT = 8080
+    conn = connect2robot(PORT)
+    interface = Joystick()
+    x = []
+    for gx in np.arange(0.3,0.6,0.02):
+        final_x = []
+        for _ in range(10):
+            final_state = run(conn, interface, gx)
+            final_x.append(final_state[0])
+            print("gx: {} iter: {}".format(gx,_))
+        x.append(np.mean(final_x))
+    print(x)
+    plt.plot(np.arange(0.3,0.7,0.02), x)
+    plt.show()
 
         
 

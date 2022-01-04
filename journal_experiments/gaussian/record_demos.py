@@ -8,8 +8,8 @@ import random
 
 # Storing some important states
 HOME = np.asarray([0.022643, -0.789077, -0.000277, -2.358605, -0.005446, 1.573151, -0.708887])
-GOAL_EE = np.asarray([0.64743481, 0.02665257, 0.25038403])
-SIGMA = np.asarray([[0.001, 0, 0], [0,0.001,0], [0,0,0.001]])
+GOAL_EE = np.asarray([0.50, 0.02665257, 0.25038403])
+SIGMA = np.asarray([[0.01, 0, 0], [0,0.01,0], [0,0,0.01]])
 Q_MAX = [2.8, 1.7, 2.8, -0.75, 2.8, 3.7, 2.8]
 Q_MIN = [-2.8, -1.7, -2.8, -3.0, -2.8, 0.0, -2.8]
 
@@ -181,15 +181,14 @@ def generate_demo(filename, conn, interface):
                 print("[*] Saved file at: ", savename)
                 return True
 
+            xdot = np.zeros(6)
+            xdot[:3] =  np.clip((goal - pose), -0.1, 0.1)
             curr_time = time.time()
             if curr_time - start_time >= steptime:
                 if dist < 0.02:
                     stationary_points += 1
-                demonstration.append(start_pose.tolist() + pose.tolist())
+                demonstration.append([start_pose.tolist() + pose.tolist(), xdot[:3].tolist()])
                 start_time = curr_time
-
-            xdot = np.zeros(6)
-            xdot[:3] =  np.clip((goal - pose), -0.1, 0.1)
             qdot = xdot2qdot(xdot, state)
             send2robot(conn, qdot)
 
