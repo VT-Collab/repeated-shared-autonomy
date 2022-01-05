@@ -4,7 +4,7 @@ import pickle
 import pygame
 import sys
 import random
-
+import os
 import torch
 import torch.nn as nn
 from env import SimpleEnv
@@ -52,13 +52,17 @@ class Joystick(object):
         self.deadband = 0.1
         self.timeband = 0.5
         self.lastpress = time.time()
+        if os.name == "posix":
+            self.z_axis = 3
+        else:
+            self.z_axis = 4
 
     def input(self):
         pygame.event.get()
         curr_time = time.time()
         dx = self.gamepad.get_axis(0)
         dy = -self.gamepad.get_axis(1)
-        dz = -self.gamepad.get_axis(4)
+        dz = -self.gamepad.get_axis(self.z_axis)
         if abs(dx) < self.deadband:
             dx = 0.0
         if abs(dy) < self.deadband:
