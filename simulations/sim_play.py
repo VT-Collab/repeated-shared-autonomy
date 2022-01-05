@@ -67,10 +67,12 @@ class Joystick(object):
             dz = 0.0
         A_pressed = self.gamepad.get_button(0) and (curr_time - self.lastpress > self.timeband)
         B_pressed = self.gamepad.get_button(1) and (curr_time - self.lastpress > self.timeband)
+        X_pressed = self.gamepad.get_button(2)
+        Y_pressed = self.gamepad.get_button(3)
         START_pressed = self.gamepad.get_button(7) and (curr_time - self.lastpress > self.timeband)
         if A_pressed or B_pressed or START_pressed:
             self.lastpress = curr_time
-        return [dx, dy, dz], A_pressed, B_pressed, START_pressed
+        return [dx, dy, dz], A_pressed, B_pressed, START_pressed, X_pressed, Y_pressed
 
 
 def main():
@@ -97,6 +99,12 @@ def main():
     assist = False
     assist_start = 3.
     steptime = 0.1
+    traj1 = pickle.load(open("demos/1_1.pkl", "rb"))
+    traj2 = pickle.load(open("demos/2_1.pkl", "rb"))
+    start1 = traj1[15]
+    start2 = traj2[15]
+    # print(start1)
+
 
     print('[*] Main loop...')
     state = env.reset()
@@ -110,7 +118,7 @@ def main():
         state = env.state()
         s = state['joint_position'].tolist()
 
-        u, start, mode, stop = interface.input()
+        u, start, mode, stop, X_in, Y_in = interface.input()
         if stop:
             # pickle.dump( demonstration, open( demos_savename, "wb" ) )
             # pickle.dump(data, open( data_savename, "wb" ) )
@@ -124,6 +132,31 @@ def main():
             start_time = time.time()
             assist_time = time.time()
             print('[*] Recording the demonstration...')
+        
+        if mode:
+            env.reset()
+            record = False
+            assist = False
+
+        if X_in:
+            print("XINPUT")
+            # env.step(start1)
+            pos = [1.45969408e-03, -1.19984115e+00,  1.44616416e-03, -1.77202367e+00,  -6.51033560e-04,  1.35692320e+00,  7.87672825e-01]
+            env.reset(pos)
+
+            print(start1)
+            print(state['joint_position'])
+            print(state['ee_position'])
+
+        
+        if Y_in:
+            print("YINPUT")
+            # env.step(start2)
+            pos = [0.03842222, -1.16415388, -0.12302732, -1.77853889, -0.07355825,  1.40489792,  0.68592709]
+            env.reset(pos)
+            print(start2)
+            print(state['joint_position'])
+            print(state['ee_position'])
 
         xdot_h = np.zeros(6)
         xdot_h[:3] = scaling_trans * np.asarray(u)
@@ -131,6 +164,7 @@ def main():
         x_pos = state['ee_position']
 
         alpha = model.classify(start_pose.tolist() + x_pos.tolist())
+        alpha = min(alpha,0.7)
         z = model.encoder(start_pose.tolist() + x_pos.tolist())
         a_robot = model.decoder(z, x_pos.tolist())
         xdot_r = np.zeros(6)
@@ -143,7 +177,7 @@ def main():
 
         if assist:
             # alpha = 0
-            xdot = alpha * 2.5 * xdot_r + (1 - alpha) * xdot_h 
+            xdot = alpha * 1 * xdot_r + (1 - alpha)*2 * xdot_h 
         else:
             xdot = xdot_h
 
@@ -161,9 +195,9 @@ def main():
             # qdot_r = xdot2qdot(xdot_r, state).tolist()
             # data.append([elapsed_time] + [s] + [qdot_h] + [qdot_r] + [float(alpha)])
             start_time = curr_time
-            # print(float(alpha))
+            print(float(alpha))
 
-        env.step(xdot_h[:3])
+        env.step(xdot[:3])
         
 
 if __name__ == "__main__":

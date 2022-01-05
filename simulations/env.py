@@ -11,7 +11,7 @@ class SimpleEnv():
 
     def __init__(self):
         # create simulation (GUI)
-        goals = pickle.load(open("goals4.pkl", "rb"))
+        goals = pickle.load(open("goals2.pkl", "rb"))
         self.urdfRootPath = pybullet_data.getDataPath()
         p.connect(p.GUI)
         p.setGravity(0, 0, -9.81)
@@ -21,7 +21,7 @@ class SimpleEnv():
 
         # load some scene objects
         p.loadURDF(os.path.join(self.urdfRootPath, "plane.urdf"), basePosition=[0, 0, -0.65])
-        p.loadURDF(os.path.join(self.urdfRootPath, "table/table.urdf"), basePosition=[0.5, -0.6, -0.65])
+        # p.loadURDF(os.path.join(self.urdfRootPath, "table/table.urdf"), basePosition=[0.5, -0.6, -0.65])
 
         for goal in range (len(goals)):
             p.loadURDF(os.path.join(self.urdfRootPath, "sphere_small.urdf"), basePosition=goals[goal])
@@ -32,7 +32,7 @@ class SimpleEnv():
         # load a panda robot
         self.panda = Panda([0, -0.6, 0])
 
-    def reset(self, q=[0.0, 0.0, 0.0, -2*np.pi/4, 0.0, np.pi/2, np.pi/4]):
+    def reset(self, q=[0.0, -np.pi/4, 0.0, -2*np.pi/4, 0.0, np.pi/2, np.pi/4]):
         self.panda.reset(q)
         return [self.panda.state]
 
@@ -42,7 +42,8 @@ class SimpleEnv():
     def step(self, action):
         # get current state
         state = [self.panda.state]
-        self.panda.step(dposition=action)
+        if len(action) ==3:
+            self.panda.step(dposition=action)
 
         # take simulation step
         p.stepSimulation()

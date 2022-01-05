@@ -8,8 +8,8 @@ import numpy as np
 import sys
 import os
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
+# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = "cpu"
 # Clear GPU memory from previous runs
 if device == "cuda":
     torch.cuda.empty_cache()
@@ -82,7 +82,7 @@ def main():
     dataset = []
     folder = 'demos'
     lookahead = 5
-    noiselevel = 0.05
+    noiselevel = 0.005
     noisesamples = 5
 
     savename = 'data/' + 'cae_' + str(tasks) + '.pkl'
