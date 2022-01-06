@@ -9,8 +9,8 @@ from sklearn.utils import shuffle
 import sys
 import os
 import copy 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
+# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = "cpu"
 # Clear GPU memory from previous runs
 if device == "cuda":
     torch.cuda.empty_cache()
