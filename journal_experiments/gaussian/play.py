@@ -228,7 +228,8 @@ def run(conn, interface, gx):
     start_q = state["q"].tolist()
     start_pose = joint2pose(start_q)
     assist_start = 1.
-    gstar = np.asarray([0.5, gx, 0.25038403])
+    # gstar = np.asarray([0.50, 0.02665257, 0.25038403])
+    gstar = np.asarray([gx, 0.02665257, 0.25038403])
     goal = np.random.multivariate_normal(GOAL_D, SIGMA_D)
     start_time = time.time()
     assist_time = time.time()
@@ -242,7 +243,7 @@ def run(conn, interface, gx):
         pose = joint2pose(state["q"])
 
         u, start, mode, stop = interface.input()
-        if stop or np.sum(np.abs(qdot)) < 0.0:
+        if stop or np.sum(np.abs(qdot)) < 0.05:
             # pickle.dump( demonstration, open( demos_savename, "wb" ) )
             # pickle.dump(data, open( data_savename, "wb" ) )
             # print(data[0])
@@ -251,8 +252,8 @@ def run(conn, interface, gx):
             return pose
 
         xdot_h = np.zeros(6)
-        xdot_h[:3] = scaling_trans * np.asarray(u)
-        # xdot_h[:3] =  np.clip((gstar - pose), -0.1, 0.1)
+        # xdot_h[:3] = scaling_trans * np.asarray(u)
+        xdot_h[:3] =  np.clip((gstar - pose), -0.1, 0.1)
         x_pos = joint2pose(state["q"])
 
         alpha = model.classify(start_pose.tolist() + x_pos.tolist() + xdot_h[:3].tolist())
@@ -266,7 +267,7 @@ def run(conn, interface, gx):
         if curr_time - assist_time >= assist_start and not assist:    
             # print("[*] Assistance started...")
             assist = True
-        assist = False
+        # assist = False
         if assist:
             xdot = alpha * xdot_r + (1 - alpha) * xdot_h 
         else:
@@ -300,13 +301,14 @@ def main():
     conn = connect2robot(PORT)
     interface = Joystick()
     x = []
-    g_range = np.arange(-0.0,0.7,0.1)
+    g_range = np.arange(0.3,0.7,0.01)
     for gx in g_range:
         final_x = []
         for _ in range(1):
             final_state = run(conn, interface, gx)
-            final_x.append(final_state[0])
-            print("gx: {} iter: {} xreal: {}".format(gx,_,final_state[1]))
+            poi = final_state[0]
+            final_x.append(poi)
+            print("gx: {} iter: {} xreal: {}".format(gx,_,poi))
         x.append(np.mean(final_x))
     print(x)
     # 

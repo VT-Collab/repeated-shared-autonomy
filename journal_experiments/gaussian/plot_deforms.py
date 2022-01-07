@@ -21,7 +21,7 @@ def main():
         ax.plot(traj[:,3], traj[:,4], traj[:,5], label='parametric curve')
     # ax.legend()
     for traj in deformed_trajs:
-        ax.plot(traj[:,1], traj[:,2], traj[:,2], label='parametric curve')
+        ax.plot(traj[:,0], traj[:,1], traj[:,2], label='parametric curve')
     plt.show()
 
 
