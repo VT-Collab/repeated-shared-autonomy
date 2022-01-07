@@ -131,6 +131,7 @@ def main():
     shelf_count = 0
 
     savename = 'data/' + '0_class_' + str(tasks) + '.pkl'
+    deformed_trajs = []
     for filename in os.listdir(folder):
         demo = pickle.load(open(folder + "/" + filename, "rb"))
         traj = [item[0] for item in demo]
@@ -152,6 +153,7 @@ def main():
             start = 0
             for i in range(deformed_samples):
                 snip_deformed = deform(snip[:,3:], 0, deform_len, tau)
+                deformed_trajs.append(snip_deformed)
                 snip[:,3:] = snip_deformed
                 # fake data
                 n_states = len(snip)
@@ -163,45 +165,46 @@ def main():
                     dataset.append((home_state + position.tolist() + action[idx], position.tolist(), z, action[idx], traj_type))
                     false_cnt += 1
                     # print(dataset[-1])
+    pickle.dump(deformed_trajs, open("deformed_trajs.pkl", "wb"))
     pickle.dump(dataset, open(savename, "wb"))
     print(dataset[-1])
     print("[*] I have this many subtrajectories: ", len(dataset))
     print("[*] false count: " + str(false_cnt) + " true: " + str(true_cnt))
 
-    model = Net().to(device)
-    dataname = 'data/' + '0_class_' + str(tasks) + '.pkl'
-    savename = 'models/' + '0_class_' + str(tasks)
+    # model = Net().to(device)
+    # dataname = 'data/' + '0_class_' + str(tasks) + '.pkl'
+    # savename = 'models/' + '0_class_' + str(tasks)
 
-    EPOCH = 500
-    # BATCH_SIZE_TRAIN = 10000
-    LR = 0.005
-    LR_STEP_SIZE = 200
-    LR_GAMMA = 0.1
+    # EPOCH = 500
+    # # BATCH_SIZE_TRAIN = 10000
+    # LR = 0.005
+    # LR_STEP_SIZE = 200
+    # LR_GAMMA = 0.1
 
 
-    raw_data = pickle.load(open(dataname, "rb"))
-    raw_data = random.sample(raw_data, len(raw_data))
-    # raw_data = raw_data.tolist()
-    inputs = [element[:4] for element in raw_data]
-    targets = [element[4] for element in raw_data]
-    # print(inputs[0])
+    # raw_data = pickle.load(open(dataname, "rb"))
+    # raw_data = random.sample(raw_data, len(raw_data))
+    # # raw_data = raw_data.tolist()
+    # inputs = [element[:4] for element in raw_data]
+    # targets = [element[4] for element in raw_data]
+    # # print(inputs[0])
 
-    train_data = MotionData(inputs, targets)
-    BATCH_SIZE_TRAIN = int(train_data.__len__() / 10.)
-    train_set = DataLoader(dataset=train_data, batch_size=BATCH_SIZE_TRAIN, shuffle=True)
+    # train_data = MotionData(inputs, targets)
+    # BATCH_SIZE_TRAIN = int(train_data.__len__() / 10.)
+    # train_set = DataLoader(dataset=train_data, batch_size=BATCH_SIZE_TRAIN, shuffle=True)
 
-    optimizer = optim.Adam(model.parameters(), lr=LR)
-    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=LR_STEP_SIZE, gamma=LR_GAMMA)
+    # optimizer = optim.Adam(model.parameters(), lr=LR)
+    # scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=LR_STEP_SIZE, gamma=LR_GAMMA)
 
-    for epoch in range(EPOCH):
-        for batch, x in enumerate(train_set):
-            optimizer.zero_grad()
-            loss = model(x)
-            loss.backward()
-            optimizer.step()
-        scheduler.step()
-        print(epoch, loss.item())
-        torch.save(model.state_dict(), savename)
+    # for epoch in range(EPOCH):
+    #     for batch, x in enumerate(train_set):
+    #         optimizer.zero_grad()
+    #         loss = model(x)
+    #         loss.backward()
+    #         optimizer.step()
+    #     scheduler.step()
+    #     print(epoch, loss.item())
+    #     torch.save(model.state_dict(), savename)
 
 
 if __name__ == "__main__":
