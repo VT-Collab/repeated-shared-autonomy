@@ -144,9 +144,9 @@ def main():
             dataset.append((home_state + position + action[idx], position, z, action[idx], traj_type))
             true_cnt += 1
         snippets = np.array_split(traj, 2)
-        deformed_samples = 2
+        deformed_samples = 5
         for snip in snippets:
-            tau = np.random.uniform([-0.05]*3, [0.05]*3)
+            tau = np.random.uniform([-0.8]*3, [0.8]*3)
             deform_len = len(snip)
             # print(deform_len)
             start = 0
