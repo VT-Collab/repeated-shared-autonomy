@@ -46,13 +46,15 @@ class Net(nn.Module):
 
         # Encoder
         self.classifier = nn.Sequential(
-            nn.Linear(9, 7),
+            nn.Linear(9, 15),
             nn.Tanh(),
             # nn.Dropout(0.1),
-            nn.Linear(7, 20),
+            nn.Linear(15, 20),
             nn.Tanh(),
             # nn.Dropout(0.1),
-            nn.Linear(20, 7),
+            nn.Linear(20, 15),
+            nn.Tanh(),
+            nn.Linear(15, 7),
             nn.Tanh(),
             nn.Linear(7, 2)
         )

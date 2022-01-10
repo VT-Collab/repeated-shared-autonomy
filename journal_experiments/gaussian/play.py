@@ -229,7 +229,7 @@ def run(conn, interface, gx):
     start_pose = joint2pose(start_q)
     assist_start = 1.
     # gstar = np.asarray([0.50, 0.02665257, 0.25038403])
-    gstar = np.asarray([gx, 0.02665257, 0.25038403])
+    gstar = np.asarray([0.50, gx, 0.25038403])
     goal = np.random.multivariate_normal(GOAL_D, SIGMA_D)
     start_time = time.time()
     assist_time = time.time()
@@ -301,14 +301,14 @@ def main():
     conn = connect2robot(PORT)
     interface = Joystick()
     x = []
-    g_range = np.arange(0.3,0.7,0.002)
+    g_range = np.arange(-0.3,0.3,0.01)
     for gx in g_range:
         final_x = []
-        for _ in range(5):
+        for _ in range(1):
             final_state = run(conn, interface, gx)
-            poi = final_state[0]
+            poi = final_state[1]
             final_x.append(poi)
-            print("gx: {} iter: {} xreal: {}".format(gx,_,poi))
+            print("gx: {3f} iter: {} xreal: {3f}".format(gx,_,poi))
         x.append(np.mean(final_x))
     # print(x)
     # 
