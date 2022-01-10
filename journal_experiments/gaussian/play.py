@@ -304,11 +304,11 @@ def main():
     g_range = np.arange(-0.3,0.3,0.01)
     for gx in g_range:
         final_x = []
-        for _ in range(1):
+        for _ in range(5):
             final_state = run(conn, interface, gx)
             poi = final_state[1]
             final_x.append(poi)
-            print("gx: {3f} iter: {} xreal: {3f}".format(gx,_,poi))
+            print("gx: {0:1.3f} iter: {1} xreal: {2:1.3f}".format(gx,_,poi))
         x.append(np.mean(final_x))
     # print(x)
     # 
