@@ -290,7 +290,7 @@ def run(conn, interface, gx):
             qdot_r = xdot2qdot(xdot_r, state).tolist()
             data.append([elapsed_time] + [s] + [qdot_h] + [qdot_r] + [float(alpha)])
             start_time = curr_time
-            # print(float(alpha))
+            print(float(alpha))
             # print(pose[1])
         send2robot(conn, state, qdot)
 
