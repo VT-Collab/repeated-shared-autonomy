@@ -291,7 +291,7 @@ def run(conn, interface, gx):
             start_time = curr_time
             # print(float(alpha))
             # print(pose[1])
-        print(np.abs(qdot))
+        print(np.sum(np.abs(qdot)))
         send2robot(conn, state, qdot)
 
 def main():
