@@ -21,7 +21,7 @@ torch.cuda.empty_cache()
 # Storing some important states
 HOME = np.asarray([0.022643, -0.789077, -0.000277, -2.358605, -0.005446, 1.573151, -0.708887])
 GOAL_D = np.asarray([0.50, 0.02665257, 0.25038403])
-SIGMA_D = np.identity(3) * 0.0001
+SIGMA_D = np.identity(3) * 0.001
 
 GOAL_H = np.asarray([0.50, 0.02665257, 0.25038403])
 Q_MAX = [2.8, 1.7, 2.8, -0.75, 2.8, 3.7, 2.8]
