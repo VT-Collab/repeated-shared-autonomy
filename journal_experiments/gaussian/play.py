@@ -300,10 +300,10 @@ def main():
     conn = connect2robot(PORT)
     interface = Joystick()
     x = []
-    g_range = np.arange(-0.1,0.1,0.01)
+    g_range = np.arange(-0.3,0.3,0.01)
     for gx in g_range:
         final_x = []
-        for _ in range(1):
+        for _ in range(5):
             final_state = run(conn, interface, gx)
             poi = final_state[1]
             final_x.append(poi)
