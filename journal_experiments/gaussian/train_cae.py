@@ -114,7 +114,8 @@ def main():
     cup_count = 0
     savename = 'data/' + '0_cae_' + str(tasks) + '.pkl'
     for filename in os.listdir(folder):
-        traj = pickle.load(open(folder + "/" + filename, "rb"))
+        demo = pickle.load(open(folder + "/" + filename, "rb"))
+        traj = [item[0] for item in demo]
         # print(traj)
         n_states = len(traj)
         z = [1.0]
