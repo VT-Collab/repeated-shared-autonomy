@@ -103,7 +103,7 @@ def main():
 
     dataset = []
     folder = 'demos'
-    lookahead = 15
+    lookahead = 5
     noiselevel = 0.05
     noisesamples = 5
 
