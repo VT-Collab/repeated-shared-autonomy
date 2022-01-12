@@ -243,7 +243,7 @@ def run(conn, interface, gx):
         pose = joint2pose(state["q"])
 
         u, start, mode, stop = interface.input()
-        if stop or np.sum(np.abs(qdot)) < 0.05:
+        if stop or (np.sum(np.abs(qdot)) < 0.1 and assist):
             # pickle.dump( demonstration, open( demos_savename, "wb" ) )
             # pickle.dump(data, open( data_savename, "wb" ) )
             # print(data[0])
