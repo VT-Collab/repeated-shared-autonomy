@@ -6,9 +6,10 @@ import pybullet_data
 
 class Panda():
 
-    def __init__(self, basePosition=[0,0,0]):
+    def __init__(self, basePosition=[0,0,0], baseOrientation=[0,0,0]):
         self.urdfRootPath = pybullet_data.getDataPath()
-        self.panda = p.loadURDF(os.path.join(self.urdfRootPath,"franka_panda/panda.urdf"),useFixedBase=True,basePosition=basePosition)
+        baseOrient = p.getQuaternionFromEuler(baseOrientation)
+        self.panda = p.loadURDF(os.path.join(self.urdfRootPath,"franka_panda/panda.urdf"),useFixedBase=True,basePosition=basePosition, baseOrientation=baseOrient)
 
     """functions that environment should use"""
 

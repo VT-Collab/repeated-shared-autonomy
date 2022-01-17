@@ -45,14 +45,14 @@ class Net(nn.Module):
 
         # Encoder
         self.classifier = nn.Sequential(
-            nn.Linear(6, 7),
+            nn.Linear(6, 15),
             nn.Tanh(),
             # nn.Dropout(0.1),
-            # nn.Linear(14, 20),
-            # nn.Tanh(),
+            nn.Linear(15, 20),
+            nn.Tanh(),
             # nn.Dropout(0.1),
-            # nn.Linear(10, 10),
-            # nn.Tanh(),
+            nn.Linear(20, 7),
+            nn.Tanh(),
             nn.Linear(7, 2)
         )
 
@@ -94,9 +94,10 @@ def main():
     tasks = int(sys.argv[1])
 
     dataset = []
-    folder = 'demos'
+    folder = 'demos/Noisy_Demos'
     lookahead = 0
     noiselevel = 0.05
+    deformed_trajs = []
     # noisesamples = 3
 
     true_cnt = 0
@@ -113,7 +114,7 @@ def main():
             dataset.append((home_state.tolist() + position.tolist(), position.tolist(), traj_type))
             true_cnt += 1
 
-        snippets = np.array_split(traj, 2)
+        snippets = np.array_split(traj, 1)
         deformed_samples = 2
         for snip in snippets:
             tau = np.random.uniform([-0.05]*3, [0.05]*3)
