@@ -29,54 +29,54 @@ def deform(xi, start, length, tau):
     xi1[start:end,:] += gamma[0:end-start,:]
     return xi1
 
+def add_noise():
+    savefolder = 'Noisy_Demos'
+    N_Waypoints = 10
+    N_Noisy = 5
+    folder = 'demos/Demos'
 
-savefolder = 'Noisy_Demos'
-N_Waypoints = 10
-N_Noisy = 5
-folder = 'demos/Demos'
 
+    demos = []
+    D = []
+    N = []
+    pairs = pairs_clip = []
+    i = 0
+    for filename in os.listdir(folder):
+        xi = pickle.load(open(folder + '/' + filename, "rb"))
+        xi = np.asarray(xi)
+        # demos.append(np.asarray(xi))
+        ## DEMOS
+        # D.append(rescale(xi, N_Waypoints, 1))
+        # D.append(xi)
+        ## ADDING NOISE
+        j = 0
+        for episode in range(N_Noisy):
+            print(episode)
+            savename = "demos/Noisy_Demos/" + str(i+1) + "_" + str(j+1) + ".pkl"
+            length = 40 #np.random.randint(10,20)
+            start = np.random.randint(0, len(xi)-20 - length)
+            # start = 5
+            tau = np.random.uniform([-0.01]*3, [0.01]*3)
+            # tau1 = np.array([0,0,0,0])
+            # tau = np.concatenate((tau,tau1), axis=0)
+            xi1 = deform(xi, start, length, tau)
+            # plt.plot(xi[:,0],xi[:,1])
+            # plt.plot(xi1[:,0],xi1[:,1])
+            # plt.show()
+            # N.append(xi1)
+            N_clip = xi1[start:start+length,:]
+            D_clip = xi[start:start+length,:]
+            p_clip = [D_clip,N_clip]
+            # print(np.shape(xi1))
+            # print(p_clip)
+            pairs_clip.append([D_clip,N_clip])
+            pickle.dump(xi1, open(savename, "wb"))
+            # pairs.append([D[i],N[j]])
+            # print(len(pairs_clip),len(pairs))
 
-demos = []
-D = []
-N = []
-pairs = pairs_clip = []
-i = 0
-for filename in os.listdir(folder):
-    xi = pickle.load(open(folder + '/' + filename, "rb"))
-    xi = np.asarray(xi)
-    # demos.append(np.asarray(xi))
-    ## DEMOS
-    # D.append(rescale(xi, N_Waypoints, 1))
-    # D.append(xi)
-    ## ADDING NOISE
-    j = 0
-    for episode in range(N_Noisy):
-        print(episode)
-        savename = "demos/Noisy_Demos/" + str(i+1) + "_" + str(j+1) + ".pkl"
-        length = 40 #np.random.randint(10,20)
-        start = np.random.randint(0, len(xi)-20 - length)
-        # start = 5
-        tau = np.random.uniform([-0.01]*3, [0.01]*3)
-        # tau1 = np.array([0,0,0,0])
-        # tau = np.concatenate((tau,tau1), axis=0)
-        xi1 = deform(xi, start, length, tau)
-        # plt.plot(xi[:,0],xi[:,1])
-        # plt.plot(xi1[:,0],xi1[:,1])
-        # plt.show()
-        # N.append(xi1)
-        N_clip = xi1[start:start+length,:]
-        D_clip = xi[start:start+length,:]
-        p_clip = [D_clip,N_clip]
-        # print(np.shape(xi1))
-        # print(p_clip)
-        pairs_clip.append([D_clip,N_clip])
-        pickle.dump(xi1, open(savename, "wb"))
-        # pairs.append([D[i],N[j]])
-        # print(len(pairs_clip),len(pairs))
-
-        # print(i,j)
-        j = j+1
-    i = i+1
+            # print(i,j)
+            j = j+1
+        i = i+1
 
     # print(len(pairs_clip))
 
@@ -84,3 +84,10 @@ for filename in os.listdir(folder):
 # pickle.dump( D, open( savefolder + "/demos.pkl", "wb" ) )
 # pickle.dump( pairs, open( savefolder + "/pairs.pkl", "wb" ) )
 # pickle.dump( pairs_clip, open( savefolder + "/clipped_pairs.pkl", "wb" ) )
+
+def main():
+    add_noise()
+
+
+if __name__ == "__main__":
+    main()

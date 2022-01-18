@@ -89,9 +89,10 @@ def deform(xi, start, length, tau):
     return xi1
 
 # train cAE
-def main():
+def train_classifier(tasks):
 
-    tasks = int(sys.argv[1])
+    # tasks = int(sys.argv[1])
+    tasks = int(tasks)
 
     dataset = []
     folder = 'demos/Noisy_Demos'
@@ -172,6 +173,9 @@ def main():
         print(epoch, loss.item())
         torch.save(model.state_dict(), savename)
 
+def main():
+    num_tasks = 1
+    train_classifier(num_tasks)
 
 if __name__ == "__main__":
     main()

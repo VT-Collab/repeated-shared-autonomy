@@ -21,14 +21,16 @@ def get_cylinder(radius,rand_i):
     # z = 0
     return g
 
-def main():
-    env_goals = sys.argv[1]
+def gen_dataset(tasks):
+    
+    env_goals = tasks
     goals = []
     radius = 0.6
     num_goals = int(env_goals)
     n_waypoints = 75
-    rand_i = np.linspace(-0.25,0.25,num_goals+1)
+    rand_i = np.linspace(0.0, 1.0,num_goals+1)
     savename = "goals/goals" + str(num_goals) + ".pkl"
+    
 
 
     # GENERATE A GIVEN NUMBER OF GOALS ON THE SURFACE OF A CYLINDER
@@ -43,6 +45,10 @@ def main():
     print("goals=", goals)
     env = SimpleEnv(env_goals)
     state = env.reset()
+    state = state[-1]
+    states = env.state()
+    ee_pos = state['ee_position']
+    print(ee_pos)
     # time.sleep(10)
 
     for goal in range (num_goals):
@@ -69,6 +75,8 @@ def main():
         pickle.dump(trajectory, open(file_name, "wb"))
         pickle.dump(trajectory, open(filename, "wb"))
 
+    p.disconnect()
+
     # folder = 'demos'
     # sapairs = []
     # for filename in os.listdir(folder):
@@ -87,7 +95,9 @@ def main():
     # pickle.dump(sapairs, open("sa_pairs/sa_pairs_" + str(num_goals) + ".pkl", "wb"))
 
 
-
+def main():
+    num_tasks = 1
+    gen_dataset(num_tasks)
 
 
 

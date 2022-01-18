@@ -76,8 +76,9 @@ class CAE(nn.Module):
         return self.loss_func(action_decoded, action_target)
 
 # train cAE
-def main():
-    tasks = int(sys.argv[1])
+def train_cae(tasks):
+    # tasks = int(sys.argv[1])
+    tasks = int(tasks)
 
     dataset = []
     folder = 'demos/Noisy_Demos'
@@ -129,6 +130,10 @@ def main():
         scheduler.step()
         print(epoch, loss.item())
         torch.save(model.state_dict(), savename)
+
+def main():
+    num_tasks = 1
+    train_cae(num_tasks)
 
 
 if __name__ == "__main__":

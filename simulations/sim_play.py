@@ -80,7 +80,7 @@ class Joystick(object):
         return [dx, dy, dz], A_pressed, B_pressed, START_pressed, X_pressed, Y_pressed
 
 
-def main(goal_numbers, iter):
+def sim_play(goal_numbers, iter):
     # filename = sys.argv[1]
     filename = "test" + str(goal_numbers+1) 
     tasks = str(goal_numbers+1)
@@ -212,8 +212,8 @@ def main(goal_numbers, iter):
             elapsed_time = curr_time - assist_time
             xdoth = xdot_h[:3]
             effort.append((1-alpha)*(abs(xdoth[0])+abs(xdoth[1])+abs(xdoth[2])))
-            help.append(alpha)
             velocity_arr.append(np.linalg.norm(xdot[:3]))
+            help.append(alpha)
             # qdot_h = xdot2qdot(xdot_h, state).tolist()
             # qdot_r = xdot2qdot(xdot_r, state).tolist()
             # data.append([elapsed_time] + [s] + [qdot_h] + [qdot_r] + [float(alpha)])
@@ -226,9 +226,12 @@ def main(goal_numbers, iter):
         env.step(0.1*xdot[:3])
         
         
-
-if __name__ == "__main__":
+def main():
     max_goals = sys.argv[1]
     for goal_numbers in range(int(max_goals)):
         for iter in range(5):
-            main(goal_numbers, iter)
+            sim_play(goal_numbers, iter)
+
+
+if __name__ == "__main__":
+    main()
