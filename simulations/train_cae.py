@@ -44,8 +44,8 @@ class CAE(nn.Module):
         self.enc = nn.Sequential(
             nn.Linear(6, 10),
             nn.Tanh(),
-            # nn.Linear(15, 10),
-            # nn.Tanh(),
+            nn.Linear(10, 10),
+            nn.Tanh(),
             nn.Linear(10, 1)
         )
 
@@ -76,11 +76,12 @@ class CAE(nn.Module):
         return self.loss_func(action_decoded, action_target)
 
 # train cAE
-def main():
-    tasks = int(sys.argv[1])
+def train_cae(tasks):
+    # tasks = int(sys.argv[1])
+    tasks = int(tasks)
 
     dataset = []
-    folder = 'demos'
+    folder = 'demos/Noisy_Demos'
     lookahead = 5
     noiselevel = 0.005
     noisesamples = 5
@@ -96,7 +97,7 @@ def main():
             position = traj[idx]
             nextposition = traj[idx + lookahead]
             for jdx in range(noisesamples):
-                action = nextposition - (position + np.random.normal(0, noiselevel, 3))
+                action = 20*(nextposition - (position + np.random.normal(0, noiselevel, 3)))
                 dataset.append((home_state.tolist() + position.tolist(), position.tolist(), z, action.tolist()))
 
     pickle.dump(dataset, open(savename, "wb"))
@@ -129,6 +130,10 @@ def main():
         scheduler.step()
         print(epoch, loss.item())
         torch.save(model.state_dict(), savename)
+
+def main():
+    num_tasks = 1
+    train_cae(num_tasks)
 
 
 if __name__ == "__main__":
