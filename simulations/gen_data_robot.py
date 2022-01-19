@@ -103,7 +103,7 @@ def gen_data():
     # rand_i = np.linspace(0.0, 1.0,num_goals+1)
     savename = "goals/goals" + str(num_goals) + ".pkl"
 
-    filename = "data/demos/" + str(num_goals) + ".pkl"
+    filename = "data/demos/robot" + str(num_goals) + ".pkl"
 
 
     print('[*] Connecting to low-level controller...')
