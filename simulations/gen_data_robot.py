@@ -10,6 +10,8 @@ import torch.nn as nn
 
 # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 device = "cpu"
+END1 = [-0.003122, 0.310032, 0.012054, -2.495443, -0.008477, 2.804512, 0.801903] #End 1 
+END2 = [0.00, 1.092539, 0.011473, -1.028987, -0.008504, 2.12294, 0.7976] #End 2
 
 class Joystick(object):
 
@@ -98,12 +100,13 @@ def gen_data():
     env_goals = sys.argv[1]
     goals = []
     radius = 0.6
-    num_goals = int(env_goals)
+    # num_goals = int(env_goals)
     n_waypoints = 75
+    flag = True
     # rand_i = np.linspace(0.0, 1.0,num_goals+1)
-    savename = "goals/goals" + str(num_goals) + ".pkl"
+    # savename = "goals/goals" + str(num_goals) + ".pkl"
 
-    filename = "data/demos/robot" + str(num_goals) + ".pkl"
+    filename = "demos/robot/" + str(env_goals) + ".pkl"
 
 
     print('[*] Connecting to low-level controller...')
@@ -124,11 +127,13 @@ def gen_data():
     while True:
 
         state = readState(conn)
+        # print(state)
         s = state["q"].tolist()
+        # print(s)
 
         u, start, mode, stop = interface.input()
         if stop:
-            # pickle.dump( demonstration, open( filename, "wb" ) )
+            pickle.dump( demonstration, open( filename, "wb" ) )
             print(demonstration)
             print("[*] Done!")
             print("[*] I recorded this many datapoints: ", len(demonstration))
@@ -148,6 +153,8 @@ def gen_data():
         xdot = [0]*6
 
         if translation_mode:
+            # xdot[:3] = (np.asarray(END1) - np.asarray(s))*0.1
+            # xdot[:3] = np.clip(xdot[:3], -0.05, 0.05)
             xdot[0] = scaling_trans * u[0]
             xdot[1] = scaling_trans * u[1]
             xdot[2] = scaling_trans * u[2]
@@ -156,7 +163,16 @@ def gen_data():
             xdot[4] = scaling_rot * u[1]
             xdot[5] = scaling_rot * u[2]
 
-        qdot = xdot2qdot(xdot, state)
+        # qdot = xdot2qdot(xdot, state)
+        qdot = [0]*7
+        if np.linalg.norm(np.asarray(END1) - np.asarray(s)) > 0.05 and flag and record:
+            qdot = (np.asarray(END1) - np.asarray(s))*0.5
+            qdot = np.clip(qdot, -0.5, 0.5)
+        elif record:
+            qdot = (np.asarray(END2) - np.asarray(s))*0.5
+            qdot = np.clip(qdot, -0.5, 0.5)
+            flag = False
+
         send2robot(conn, qdot)
 
 def main():
