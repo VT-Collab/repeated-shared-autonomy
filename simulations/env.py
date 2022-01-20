@@ -24,7 +24,7 @@ class SimpleEnv():
         p.loadURDF(os.path.join(self.urdfRootPath, "table/table.urdf"), basePosition=[0.5, -0.6, -0.65])
 
         for goal in range (len(goals)):
-            p.loadURDF(os.path.join(self.urdfRootPath, "sphere_small.urdf"), basePosition=goals[goal])
+            p.loadURDF(os.path.join(self.urdfRootPath, "sphere_small.urdf"), basePosition=goals[goal], useFixedBase=1)
 
         # load obstacle (soccerball)
         # p.loadURDF(os.path.join(self.urdfRootPath, "soccerball.urdf"), basePosition=[0.6, 0.1 - 0.6, 0.07], globalScaling=0.20)
