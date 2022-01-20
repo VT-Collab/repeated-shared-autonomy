@@ -262,9 +262,9 @@ def run(conn, interface, gx):
         z = model.encoder(start_pose.tolist() + x_pos.tolist())
         a_robot = model.decoder(z, x_pos.tolist())
         xdot_r = np.zeros(6)
-        xdot_r[:3] =  25 * a_robot
-        xdot_r[:3] = np.clip(xdot_r[:3], -0.1, 0.1)
-        # xdot_r[:3] = np.clip((goal - pose), -0.1, 0.1)
+        # xdot_r[:3] =  25 * a_robot
+        # xdot_r[:3] = np.clip(xdot_r[:3], -0.1, 0.1)
+        xdot_r[:3] = np.clip((goal - pose), -0.1, 0.1)
         # print("h: {}, r: {}".format(xdot_h[:3], xdot_r[:3]))
         curr_time = time.time()
         if curr_time - assist_time >= assist_start and not assist:    
