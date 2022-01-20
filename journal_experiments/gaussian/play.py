@@ -21,7 +21,7 @@ torch.cuda.empty_cache()
 # Storing some important states
 HOME = np.asarray([0.022643, -0.789077, -0.000277, -2.358605, -0.005446, 1.573151, -0.708887])
 GOAL_D = np.asarray([0.50, 0.02665257, 0.25038403])
-SIGMA_D = np.identity(3) * 0.001
+SIGMA_D = np.identity(3) * 0.0001
 
 GOAL_H = np.asarray([0.50, 0.02665257, 0.25038403])
 Q_MAX = [2.8, 1.7, 2.8, -0.75, 2.8, 3.7, 2.8]
@@ -262,9 +262,9 @@ def run(conn, interface, gx):
         z = model.encoder(start_pose.tolist() + x_pos.tolist())
         a_robot = model.decoder(z, x_pos.tolist())
         xdot_r = np.zeros(6)
-        # xdot_r[:3] =  25 * a_robot
-        # xdot_r[:3] = np.clip(xdot_r[:3], -0.1, 0.1)
-        xdot_r[:3] = np.clip((goal - pose), -0.1, 0.1)
+        xdot_r[:3] =  50 * a_robot
+        xdot_r[:3] = np.clip(xdot_r[:3], -0.1, 0.1)
+        # xdot_r[:3] = np.clip((goal - pose), -0.1, 0.1)
         # print("h: {}, r: {}".format(xdot_h[:3], xdot_r[:3]))
         curr_time = time.time()
         if curr_time - assist_time >= assist_start and not assist:    
@@ -309,7 +309,7 @@ def main():
             final_x.append(poi)
             print("gx: {0:1.3f} iter: {1} xreal: {2:1.3f}".format(gx,_,poi))
         x.append(np.mean(final_x))
-    pickle.dump([g_range, x], open("final_state.pkl", "wb"))
+    pickle.dump([g_range, final_state], open("final_state.pkl", "wb"))
     plt.plot(g_range.tolist(), x)
     plt.show()
 
