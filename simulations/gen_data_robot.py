@@ -124,6 +124,8 @@ def gen_data():
     steptime = 0.1
 
     print('[*] Main loop...')
+    start_state = readState(conn)
+    start_state = start_state["q"].tolist()
     while True:
 
         state = readState(conn)
@@ -132,7 +134,7 @@ def gen_data():
         # print(s)
 
         u, start, mode, stop = interface.input()
-        if stop:
+        if stop or len(demonstration) > 160:
             pickle.dump( demonstration, open( filename, "wb" ) )
             print(demonstration)
             print("[*] Done!")
@@ -145,7 +147,7 @@ def gen_data():
 
         curr_time = time.time()
         if record and curr_time - start_time >= steptime:
-            demonstration.append(s)
+            demonstration.append(s + start_state)
             start_time = curr_time
 
         if mode:
@@ -166,10 +168,12 @@ def gen_data():
         # qdot = xdot2qdot(xdot, state)
         qdot = [0]*7
         if np.linalg.norm(np.asarray(END1) - np.asarray(s)) > 0.05 and flag and record:
-            qdot = (np.asarray(END1) - np.asarray(s))*0.5
+            vel = np.asarray(END1) - np.asarray(s)
+            qdot =  np.random.multivariate_normal(vel, np.identity(7) * 0.005)*0.5
             qdot = np.clip(qdot, -0.5, 0.5)
         elif record:
-            qdot = (np.asarray(END2) - np.asarray(s))*0.5
+            vel = np.asarray(END2) - np.asarray(s)
+            qdot =np.random.multivariate_normal(vel, np.identity(7) * 0.005)*0.5
             qdot = np.clip(qdot, -0.5, 0.5)
             flag = False
 
