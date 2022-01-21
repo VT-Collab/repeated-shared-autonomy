@@ -262,7 +262,7 @@ def run(conn, interface, gx, iter, vae):
         a_robot = model.decoder(z, x_pos.tolist())
         xdot_r = np.zeros(6)
         if vae == "vae":
-            xdot_r[:3] =  10 * a_robot
+            xdot_r[:3] =  25 * a_robot
             xdot_r[:3] = np.clip(xdot_r[:3], -0.1, 0.1)
         else:
             xdot_r[:3] = np.clip((goal - pose), -0.1, 0.1)
@@ -302,7 +302,7 @@ def main():
     interface = Joystick()
     x = []
     g_range = np.arange(-0.3,0.3,0.01)
-    vae = "novae"
+    vae = "vae"
     for gx in g_range:
         final = []
         for iter in range(5):
@@ -312,7 +312,7 @@ def main():
             print("gx: {0:1.3f} iter: {1} xreal: {2:1.3f}".format(gx,iter,poi))
         x.append(np.mean(final, axis=0).tolist())
     print([g_range, x])
-    pickle.dump([g_range, x], open("final_state.pkl", "wb"))
+    pickle.dump([g_range, x], open("final_state_" + vae +".pkl", "wb"))
     plt.plot(g_range.tolist(), x)
     plt.show()
 
