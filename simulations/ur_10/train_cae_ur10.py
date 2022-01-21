@@ -42,7 +42,7 @@ class CAE(nn.Module):
 
         # Encoder
         self.enc = nn.Sequential(
-            nn.Linear(14, 7),
+            nn.Linear(12, 7),
             nn.Tanh(),
             # nn.Linear(10, 10),
             # nn.Tanh(),
@@ -51,11 +51,11 @@ class CAE(nn.Module):
 
         # Policy
         self.dec = nn.Sequential(
-            nn.Linear(8, 30),
+            nn.Linear(7, 30),
             nn.Tanh(),
             nn.Linear(30, 15),
             nn.Tanh(),
-            nn.Linear(15, 7)
+            nn.Linear(15, 6)
         )
 
     def encoder(self, x):
@@ -66,7 +66,7 @@ class CAE(nn.Module):
 
     def forward(self, x):
         history, state, ztrue, action = x
-        z = self.encoder(history)
+        z =  self.encoder(history)
         z_with_state = torch.cat((z, state), 1)
         action_decoded = self.decoder(z_with_state)
         loss = self.loss(action, action_decoded)
@@ -81,12 +81,12 @@ def train_cae(tasks):
     # tasks = int(tasks)
 
     dataset = []
-    folder = 'demos/robot'
+    folder = 'demos'
     lookahead = 5
     noiselevel = 0.005
     noisesamples = 5
 
-    savename = 'data/robot/' + 'cae_' + str(tasks) + '.pkl'
+    savename = 'data/' + 'cae_' + str(tasks) + '.pkl'
     for filename in os.listdir(folder):
         traj = pickle.load(open(folder + "/" + filename, "rb"))
         # print(traj)
@@ -94,11 +94,11 @@ def train_cae(tasks):
         z = [1.0] # This is used to test the decoder capabilities
         # home_state = traj[0]
         for idx in range(n_states-lookahead):
-            home_state = traj[idx][:7]
-            position = np.asarray(traj[idx])[7:]
-            nextposition = np.asarray(traj[idx + lookahead])[7:]
+            home_state = traj[idx][:6]
+            position = np.asarray(traj[idx])[6:]
+            nextposition = np.asarray(traj[idx + lookahead])[6:]
             for jdx in range(noisesamples):
-                action = nextposition - (position + np.random.normal(0, noiselevel, 7))
+                action = nextposition - (position + np.random.normal(0, noiselevel, 6))
                 dataset.append((home_state + position.tolist(), position.tolist(), z, action.tolist()))
 
     pickle.dump(dataset, open(savename, "wb"))
@@ -106,8 +106,8 @@ def train_cae(tasks):
     print("[*] I have this many subtrajectories: ", len(dataset))
 
     model = CAE().to(device)
-    dataname = 'data/robot/' + 'cae_' + str(tasks) + '.pkl'
-    savename = 'models/robot/' + 'cae_' + str(tasks)
+    dataname = 'data/' + 'cae_' + str(tasks) + '.pkl'
+    savename = 'models/' + 'cae_' + str(tasks)
 
     EPOCH = 500
     LR = 0.01

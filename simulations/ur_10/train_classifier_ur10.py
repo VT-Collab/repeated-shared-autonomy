@@ -45,7 +45,7 @@ class Net(nn.Module):
 
         # Encoder
         self.classifier = nn.Sequential(
-            nn.Linear(14, 15),
+            nn.Linear(12, 15),
             nn.Tanh(),
             # nn.Dropout(0.1),
             nn.Linear(15, 20),
@@ -87,12 +87,12 @@ def deform(xi, start, length, tau):
         A[idx, idx] = 1
         A[idx+1,idx] = -2
         A[idx+2,idx] = 1
-    R = np.linalg.inv(A.T @ A)
+    R = np.linalg.inv(np.dot(A.T, A))
     U = np.zeros(length)
-    gamma = np.zeros((length, 7))
-    for idx in range(7):
+    gamma = np.zeros((length, 6))
+    for idx in range(6):
         U[0] = tau[idx]
-        gamma[:,idx] = R @ U
+        gamma[:,idx] = np.dot(R, U)
     end = min([start+length, xi1.shape[0]-1])
     xi1[start:end,:] += gamma[0:end-start,:]
     return xi1
@@ -104,7 +104,7 @@ def train_classifier(tasks):
     # tasks = int(tasks)
 
     dataset = []
-    folder = 'demos/robot'
+    folder = 'demos'
     lookahead = 0
     noiselevel = 0.05
     deformed_trajs = []
@@ -114,16 +114,16 @@ def train_classifier(tasks):
     true_cnt = 0
     false_cnt = 0
 
-    savename = 'data/robot/' + 'class_' + str(tasks) + '.pkl'
+    savename = 'data/' + 'class_' + str(tasks) + '.pkl'
     for filename in os.listdir(folder):
         traj = pickle.load(open(folder + "/" + filename, "rb"))
         n_states = len(traj)
         # home_state = traj[0]
         for idx in range(n_states):
-            home_state = traj[idx][:7]
-            position = np.asarray(traj[idx])[7:]
-            nextposition = np.asarray(traj[idx + lookahead])[7:]
-            action = nextposition - (position + np.random.normal(0, noiselevel, 7))
+            home_state = traj[idx][:6]
+            position = np.asarray(traj[idx])[6:]
+            nextposition = np.asarray(traj[idx + lookahead])[6:]
+            action = nextposition - (position + np.random.normal(0, noiselevel, 6))
             traj_type = 0
             dataset.append((home_state + position.tolist(), position.tolist(), z, action.tolist(), traj_type))
             true_cnt += 1
@@ -131,23 +131,23 @@ def train_classifier(tasks):
         snippets = np.array_split(traj, 1)
         deformed_samples = 2
         for snip in snippets:
-                tau = np.random.uniform([-0.07]*7, [0.07]*7)
+                tau = np.random.uniform([-0.07]*6, [0.07]*6)
                 deform_len = len(snip)
                 # print(deform_len)
                 start = 0
                 for i in range(deformed_samples):
-                    snip_deformed = deform(snip[:,7:], 0, deform_len, tau)
+                    snip_deformed = deform(snip[:,6:], 0, deform_len, tau)
                     # print(np.linalg.norm(snip[:, 7:] - snip_deformed))
-                    snip[:,7:] = snip_deformed
+                    snip[:,6:] = snip_deformed
                     # fake data
                     n_states = len(snip)
                     for idx in range(start, deform_len):
-                        home_state = snip[idx][:7].tolist()
-                        position = np.asarray(snip[idx])[7:] 
+                        home_state = snip[idx][:6].tolist()
+                        position = np.asarray(snip[idx])[6:] 
                         # nextposition = np.asarray(snip[idx + lookahead])[7:]
                         # for jdx in range(noisesamples):
                         position = position #+ np.random.normal(0, noiselevel, 7)
-                        action = nextposition - (position + np.random.normal(0, noiselevel, 7))
+                        action = nextposition - (position + np.random.normal(0, noiselevel, 6))
                         traj_type = 1
                         dataset.append((home_state + position.tolist(), position.tolist(), z, action.tolist(), traj_type))
                         false_cnt += 1
@@ -158,8 +158,8 @@ def train_classifier(tasks):
     print("[*] false count: " + str(false_cnt) + " true: " + str(true_cnt))
 
     model = Net().to(device)
-    dataname = 'data/robot/' + 'class_' + str(tasks) + '.pkl'
-    savename = 'models/robot/' + 'class_' + str(tasks)
+    dataname = 'data/' + 'class_' + str(tasks) + '.pkl'
+    savename = 'models/' + 'class_' + str(tasks)
 
     EPOCH = 500
     # BATCH_SIZE_TRAIN = 10000
