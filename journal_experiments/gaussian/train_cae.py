@@ -124,7 +124,7 @@ def main():
             position = traj[idx][3:]
             nextposition = traj[idx + lookahead][3:]
             for jdx in range(noisesamples):
-                action = 10 * (nextposition - (position + np.random.normal(0, noiselevel, 3)))
+                action = 5 * (nextposition - (position + np.random.normal(0, noiselevel, 3)))
                 dataset.append((home_state + position, position, z, action.tolist()))
 
     pickle.dump(dataset, open(savename, "wb"))
