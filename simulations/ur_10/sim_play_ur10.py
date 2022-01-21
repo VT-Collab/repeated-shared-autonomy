@@ -11,6 +11,15 @@ from urdf_parser_py.urdf import URDF
 from pykdl_utils.kdl_kinematics import KDLKinematics
 import copy
 from collections import deque
+import socket
+import time
+import random
+
+import torch
+import torch.nn as nn
+from train_cae_ur10 import CAE
+from train_classifier_ur10 import Net
+import torch.nn.functional as F
 
 from std_msgs.msg import Float64MultiArray, String
 
@@ -58,6 +67,38 @@ STEP_SIZE_A = 0.2 * np.pi / 4
 STEP_TIME = 0.01
 DEADBAND = 0.1
 MOVING_AVERAGE = 100
+device = "cpu"
+
+
+class Model(object):
+
+    def __init__(self, classifier_name, cae_name):
+        self.class_net = Net()
+        self.cae_net = CAE()
+        
+        model_dict = torch.load(classifier_name, map_location='cpu')
+        self.class_net.load_state_dict(model_dict)
+        
+        model_dict = torch.load(cae_name, map_location='cpu')
+        self.cae_net.load_state_dict(model_dict)
+
+        self.class_net.eval
+        self.cae_net.eval
+
+    def classify(self, c):
+        labels = self.class_net.classifier(torch.FloatTensor(c))
+        confidence = F.softmax(labels, dim=0)
+        return confidence.data[0].numpy()
+
+    def encoder(self, c):
+        z_mean_tensor = self.cae_net.encoder(torch.FloatTensor(c))
+        return z_mean_tensor.tolist()
+
+    def decoder(self, z, s):
+        z_tensor = torch.FloatTensor(z + s)
+        a_predicted = self.cae_net.decoder(z_tensor)
+        return a_predicted.data.numpy()
+
 
 class JoystickControl(object):
 
@@ -83,9 +124,9 @@ class JoystickControl(object):
         return self.getEvent()
 
     def getEvent(self):
-        z1 = self.gamepad.get_axis(1)
-        z2 = -self.gamepad.get_axis(0)
-        z3 = self.gamepad.get_axis(4)
+        z1 = self.gamepad.get_axis(0)
+        z2 = -self.gamepad.get_axis(1)
+        z3 = -self.gamepad.get_axis(4)
         z = [z1, z2, z3]
         for idx in range(len(z)):
             if abs(z[idx]) < DEADBAND:
@@ -99,7 +140,7 @@ class JoystickControl(object):
         if self.toggle:
             self.action = (0, 0, 0, STEP_SIZE_A * -z[1], STEP_SIZE_A * -z[0], STEP_SIZE_A * -z[2])
         else:
-            self.action = (STEP_SIZE_L * -z[1], STEP_SIZE_L * -z[0], STEP_SIZE_L * -z[2], 0, 0, 0)
+            self.action = (STEP_SIZE_L * -z[1], STEP_SIZE_L * -z[0], STEP_SIZE_L * z[2], 0, 0, 0)
 
 class TrajectoryClient(object):
 
@@ -176,7 +217,7 @@ class TrajectoryClient(object):
     def xdot2qdot(self, xdot):
         J = self.kdl_kin.jacobian(self.joint_states)
         J_inv = np.linalg.pinv(J)
-        return J_inv.dot(xdot)
+        return np.dot(J_inv, xdot)
 
     def send(self, xdot):
         qdot = xdot#self.xdot2qdot(xdot)
@@ -249,7 +290,7 @@ class RecordClient(object):
 
 
 def main():
-    demo_num = sys.argv[1]
+    # demo_num = sys.argv[1]
     rospy.init_node("teleop")
 
     mover = TrajectoryClient()
@@ -266,54 +307,103 @@ def main():
     mover.switch_controller(mode='velocity')
     print("[*] Ready for joystick inputs")
 
+
+    demos = "pushing"
+    cae_model = 'models/' + 'cae_' + str(demos)
+    class_model = 'models/' + 'class_' + str(demos)
+    model = Model(class_model, cae_model)
+
     record = False
     flag = True
     demonstration = []
+    data = []
     steptime  = 0.1
+    scaling_trans = 0.1
+    scaling_rot = 0.2
+    assist = False
+    assist_start = 3.0
     action = np.array([0.0,0.0,0.0,0.0,0.0,0.0])
-    start_q = recorder.joint_states
-    filename = "demos/demo" + demo_num + ".pkl"
+    start_q = np.asarray(recorder.joint_states).tolist()
+    # qdot = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+    # filename = "demo" + demo_num + ".pkl"
 
     while not rospy.is_shutdown():
 
-        s = recorder.joint_states
+        s = np.asarray(recorder.joint_states).tolist()
         # print(np.asarray(s).tolist() + np.asarray(start_q).tolist())
         t_curr = time.time() - start_time
         axes, start, mode, stop = joystick.getInput()
-        if stop or len(demonstration)>=180:
-            pickle.dump(demonstration, open(filename, "wb"))
-            print(demonstration)
+        if stop:
+            # pickle.dump(demonstration, open(filename, "wb"))
+            # print(demonstration)
             print("[*] Done!")
             print("[*] I recorded this many datapoints: ", len(demonstration))
             mover.switch_controller(mode='position')
-            mover.send_joint(s, 1.0)
+            mover.send_joint(s, 5.0)
             return True
 
         if start and not record:
             record = True
             start_time = time.time()
+            assist_time = time.time()
             print('[*] Recording the demonstration...')
 
+        xdot_h = np.zeros(6)
+        xdot_h[:3] = scaling_trans * np.asarray(axes)
+        qdot_h = mover.xdot2qdot(xdot_h)
+        qdot_h = qdot_h.tolist()
+        # if np.linalg.norm(np.asarray(END1) - np.asarray(s)) > 0.02 and flag and record:
+        #     action = (np.asarray(END1) - np.asarray(s))*0.5
+        #     action = np.clip(action, -0.3, 0.3)
+        # elif record:
+        #     action = (np.asarray(END2) - np.asarray(s))*0.5
+        #     action = np.clip(action, -0.3, 0.3)
+        #     flag = False
+
+        # qdot_h = action*0.1
+        # # print(qdot_h)
+        # qdot_h = qdot_h.tolist()
+
+        alpha = model.classify(start_q + s)
+        alpha = np.clip(alpha, 0.0, 0.7)
+        z = model.encoder(start_q + s)
+        a_robot = model.decoder(z, s)
+        qdot_r = np.zeros(6)
+        qdot_r = 1*a_robot
+
+
         curr_time = time.time()
-        if record and curr_time - start_time >= steptime:
+        if record and curr_time - assist_time >= assist_start and not assist:
+            print("Assistance Started...")
+            assist = True
             demonstration.append(np.asarray(start_q).tolist() + np.asarray(s).tolist())
             start_time = curr_time
+
+        if assist:
+            qdot = alpha * 2.5 * qdot_r + (1-alpha) * np.asarray(qdot_h)
+        else:
+            qdot = qdot_h
+
+        if record and curr_time - start_time >= steptime:
+            demonstration.append(start_q + s)
+            elapsed_time = curr_time - assist_time
+            qdot_h = qdot_h
+            qdot_r = qdot_r.tolist()
+            data.append([elapsed_time] + [s] + [qdot_h] + [qdot_r] + [float(alpha)])
+            start_time = curr_time
+            print(float(alpha))
+            print("qdot = {}, qdot_r = {}" .format(qdot,qdot_r))
       
         # joystick.getAction(axes)
         # action = np.array([-0.1,0.0,0.0,0.0,0.0,0.0])
         # mover.send(action)
-        if np.linalg.norm(np.asarray(END1) - np.asarray(s)) > 0.02 and flag and record:
-            action = (np.asarray(END1) - np.asarray(s))*0.5
-            action = np.clip(action, -0.3, 0.3)
-        elif record:
-            action = (np.asarray(END2) - np.asarray(s))*0.5
-            action = np.clip(action, -0.3, 0.3)
-            flag = False
-        mover.send(action)
+        
+        # print(qdot)
+        mover.send(qdot[0])
         rate.sleep()
 
 if __name__ == "__main__":
     try:
         main()
     except rospy.ROSInterruptException:
-        pass
+        pass 
