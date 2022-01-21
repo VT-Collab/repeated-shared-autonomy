@@ -202,11 +202,11 @@ def go2home(conn):
     elif elapsed_time >= total_time:
         return False
 
-def run(conn, interface, gx):
+def run(conn, interface, gx, iter, vae):
     filename = sys.argv[1]
     tasks = sys.argv[2]
     demos_savename = "demos/" + str(filename) + ".pkl"
-    data_savename = "runs/" + str(filename) + ".pkl"
+    data_savename = "runs/" + str(gx) + "_" + vae + "_" + str(iter)+ ".pkl"
     cae_model = 'models/' + '0_cae_' + str(tasks)
     class_model = 'models/' + '0_class_' + str(tasks)
     model = Model(class_model, cae_model)
@@ -244,11 +244,10 @@ def run(conn, interface, gx):
 
         u, start, mode, stop = interface.input()
         if stop or (np.sum(np.abs(qdot)) < 0.1 and assist):
-            # pickle.dump( demonstration, open( demos_savename, "wb" ) )
-            # pickle.dump(data, open( data_savename, "wb" ) )
-            # print(data[0])
-            # print("[*] Done!")
-            # print("[*] I recorded this many datapoints: ", len(demonstration))
+            pickle.dump(data, open( data_savename, "wb" ) )
+            print(data[0])
+            print("[*] Done!")
+            print("[*] I recorded this many datapoints: ", len(demonstration))
             return pose
 
         xdot_h = np.zeros(6)
@@ -262,9 +261,11 @@ def run(conn, interface, gx):
         z = model.encoder(start_pose.tolist() + x_pos.tolist())
         a_robot = model.decoder(z, x_pos.tolist())
         xdot_r = np.zeros(6)
-        xdot_r[:3] =  10 * a_robot
-        xdot_r[:3] = np.clip(xdot_r[:3], -0.1, 0.1)
-        # xdot_r[:3] = np.clip((goal - pose), -0.1, 0.1)
+        if vae == "vae":
+            xdot_r[:3] =  10 * a_robot
+            xdot_r[:3] = np.clip(xdot_r[:3], -0.1, 0.1)
+        else:
+            xdot_r[:3] = np.clip((goal - pose), -0.1, 0.1)
         # print("h: {}, r: {}".format(xdot_h[:3], xdot_r[:3]))
         curr_time = time.time()
         if curr_time - assist_time >= assist_start and not assist:    
@@ -301,13 +302,14 @@ def main():
     interface = Joystick()
     x = []
     g_range = np.arange(-0.3,0.3,0.01)
+    vae = "novae"
     for gx in g_range:
         final = []
-        for _ in range(5):
-            final_state = run(conn, interface, gx)
+        for iter in range(5):
+            final_state = run(conn, interface, gx, iter, vae)
             poi = final_state[1]
             final.append(final_state)
-            print("gx: {0:1.3f} iter: {1} xreal: {2:1.3f}".format(gx,_,poi))
+            print("gx: {0:1.3f} iter: {1} xreal: {2:1.3f}".format(gx,iter,poi))
         x.append(np.mean(final, axis=0).tolist())
     print([g_range, x])
     pickle.dump([g_range, x], open("final_state.pkl", "wb"))
