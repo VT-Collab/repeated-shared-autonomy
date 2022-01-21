@@ -264,7 +264,7 @@ def main():
             # alpha = 0.5
 
         if assist:
-            alpha = 0.5
+            # alpha = 0.5
             xdot = alpha * 2.5 * xdot_r + (1 - alpha) * xdot_h 
         else:
             xdot = xdot_h

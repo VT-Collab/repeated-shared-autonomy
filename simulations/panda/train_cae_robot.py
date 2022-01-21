@@ -55,7 +55,7 @@ class CAE(nn.Module):
             nn.Tanh(),
             nn.Linear(30, 15),
             nn.Tanh(),
-            nn.Linear(15, 7)
+            nn.Linear(15, 6)
         )
 
     def encoder(self, x):
@@ -94,9 +94,9 @@ def train_cae(tasks):
         z = [1.0] # This is used to test the decoder capabilities
         # home_state = traj[0]
         for idx in range(n_states-lookahead):
-            home_state = traj[idx][:7]
-            position = np.asarray(traj[idx])[7:]
-            nextposition = np.asarray(traj[idx + lookahead])[7:]
+            home_state = traj[idx][:6]
+            position = np.asarray(traj[idx])[6:]
+            nextposition = np.asarray(traj[idx + lookahead])[6:]
             for jdx in range(noisesamples):
                 action = nextposition - (position + np.random.normal(0, noiselevel, 7))
                 dataset.append((home_state + position.tolist(), position.tolist(), z, action.tolist()))
