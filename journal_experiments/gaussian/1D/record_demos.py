@@ -17,7 +17,7 @@ def generate_demo(filename):
         print(data.tolist())
 
 def main():    
-    generate_demo(25)
+    generate_demo(250)
 
 
 if __name__ == "__main__":

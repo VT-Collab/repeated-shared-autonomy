@@ -61,29 +61,38 @@ def run(gstar, iter, vae):
 
     state = 0
     # goal = np.random.multivariate_normal(GOAL_D, SIGMA_D)
-    a_h = np.random.normal(gstar-state, sigma_d)
+    sigma_h = 1
+    sigma_d = 1
+    a_h = np.random.normal(gstar-state, sigma_h)
+    a_r = np.random.normal(5-state, sigma_d)
     alpha = model.classify([state, a_h])
-    alpha = min(alpha, 0.85)
-    print(alpha)
-    return alpha
+    # alpha = min(alpha, 0.85)
+    # print("a_h:{} alpha:{}".format(a_h, alpha))
+    return [state + (1 - alpha) * a_h + alpha * a_r, alpha]
 
 
 def main():
     x = []
-    g_range = np.arange(5,6,1)
+    g_range = np.arange(0,10.1,0.1)
     vae = "novae"
+    avg_state = []
     for gx in g_range:
-        final = []
-        for iter in range(5):
-            final_state = run(gx, iter, vae)
+        final_state = []
+        for iter in range(100000):
+            res = run(gx, iter, vae)
+            final_state.append(res[0])
+        avg_state.append(np.mean(final_state))
     #         poi = final_state[1]
     #         final.append(final_state)
     #         print("gx: {0:1.3f} iter: {1} xreal: {2:1.3f}".format(gx,iter,poi))
     #     x.append(np.mean(final, axis=0).tolist())
     # print([g_range, x])
     # pickle.dump([g_range, x], open("final_state.pkl", "wb"))
-    # plt.plot(g_range.tolist(), x)
-    # plt.show()
+    err = g_range - avg_state
+    err = err.tolist()
+    pickle.dump(err, open("err_vs_gstar.pkl", "wb"))
+    plt.plot(g_range.tolist(), err)
+    plt.show()
 
         
 

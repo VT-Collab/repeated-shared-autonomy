@@ -42,14 +42,13 @@ class Net(nn.Module):
 
         self.loss_func = nn.CrossEntropyLoss()
 
-        # Encoder
         self.classifier = nn.Sequential(
             nn.Linear(2, 5),
             nn.Tanh(),
             # nn.Dropout(0.1),
             nn.Linear(5, 5),
             nn.Tanh(),
-            nn.Linear(7, 2)
+            nn.Linear(5, 2)
         )
 
     def classify(self, x):
@@ -75,21 +74,21 @@ def main():
     false_cnt = 0
     savename = 'data/' + '0_class_' + str(tasks) + '.pkl'
     for filename in os.listdir(folder):
-        print(filename)
-        demo = pickle.load(open(folder + "/" + filename, "rb"))
-        traj_type = 0
-        print(demo)
-        for pair in demo:
-            dataset.append((pair, traj_type))
-            true_cnt += 1
-        deformed_samples = 2
-        for i in range(deformed_samples):
+        if filename[0] != ".":
+            demo = pickle.load(open(folder + "/" + filename, "rb"))
+            traj_type = 0
+            print(demo)
             for pair in demo:
-                s = np.copy(pair)
-                s[1] += np.random.normal(2, 5)
-                traj_type = 1
-                dataset.append((s.tolist(), traj_type))
-                false_cnt += 1
+                dataset.append((pair, traj_type))
+                true_cnt += 1
+            deformed_samples = 10
+            for i in range(deformed_samples):
+                for pair in demo:
+                    s = np.copy(pair)
+                    s[1] += np.random.normal(0.25, 5)
+                    traj_type = 1
+                    dataset.append((s.tolist(), traj_type))
+                    false_cnt += 1
             # print(dataset[-1])
     pickle.dump(dataset, open(savename, "wb"))
     print(dataset[-1])
