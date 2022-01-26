@@ -147,9 +147,10 @@ def train_classifier(tasks):
                         # nextposition = np.asarray(snip[idx + lookahead])[7:]
                         # for jdx in range(noisesamples):
                         position = position #+ np.random.normal(0, noiselevel, 7)
-                        action = nextposition - (position + np.random.normal(0, noiselevel, 6))
+                        noise_position = (position + np.random.normal(0, noiselevel, 6))
+                        action = nextposition - noise_position
                         traj_type = 1
-                        dataset.append((home_state + position.tolist(), position.tolist(), z, action.tolist(), traj_type))
+                        dataset.append((home_state + noise_position.tolist(), noise_position.tolist(), z, action.tolist(), traj_type))
                         false_cnt += 1
                     # print(dataset[-1])
     pickle.dump(dataset, open(savename, "wb"))

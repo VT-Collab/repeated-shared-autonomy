@@ -50,8 +50,11 @@ from geometry_msgs.msg import(
 )
 
 HOME = [-1.571, -1.18997, -2.0167, -1.3992, 1.5407, 0.0]
-END1 = [-1.6811960379229944, -1.5710356871234339, -2.2512028853045862, -0.6734879652606409, 1.5406923294067383, 1.1984225238848012e-05]
-END2 = [-1.5708683172809046, -2.1604259649859827, -1.5543845335589808, -0.8909743467914026, 1.5406923294067383, 0.00022770027862861753]
+# END1 = [-1.571, -1.5710356871234339, -2.2512028853045862, -0.6734879652606409, 1.5406923294067383, 1.1984225238848012e-05]
+# END2 = [-1.571, -2.1604259649859827, -1.5543845335589808, -0.8909743467914026, 1.5406923294067383, 0.00022770027862861753]
+
+END1 = [-0.800208870564596, -1.789145294819967, -2.005460564290182, -0.8623107115374964, 1.4747997522354126, 0.769659161567688]
+END2 = [-1.0631392637835901, -2.302997414265768, -1.2114885489093226, -1.119192902241842, 1.4926565885543823, 0.5063522458076477]
 
 STEP_SIZE_L = 0.15
 STEP_SIZE_A = 0.2 * np.pi / 4
@@ -173,6 +176,24 @@ class TrajectoryClient(object):
 
         res = self.switch_controller_cli.call(req)
 
+    def joint2pose(self):
+        state = self.kdl_kin.forward(self.joint_states)
+        xyz_lin = np.array(state[:,3][:3]).T
+        xyz_lin = xyz_lin.tolist()
+        R = state[:,:3][:3]
+        beta = -np.arcsin(R[2,0])
+        alpha = np.arctan2(R[2,1]/np.cos(beta),R[2,2]/np.cos(beta))
+        gamma = np.arctan2(R[1,0]/np.cos(beta),R[0,0]/np.cos(beta))
+        xyz_ang = [alpha, beta, gamma]
+        xyz = xyz = np.asarray(xyz_lin[-1]).tolist() + np.asarray(xyz_ang).tolist()
+        # print(xyz)
+        # print(r.as_euler('xyz'))
+
+        return xyz#self.kdl_kin.forward(self.joint_states)
+
+    def pose2joint(self, pose):
+        return self.kdl_kin.inverse(pose, self.joint_states)
+
     def xdot2qdot(self, xdot):
         J = self.kdl_kin.jacobian(self.joint_states)
         J_inv = np.linalg.pinv(J)
@@ -271,12 +292,14 @@ def main():
     demonstration = []
     steptime  = 0.1
     action = np.array([0.0,0.0,0.0,0.0,0.0,0.0])
-    start_q = recorder.joint_states
-    filename = "demos/demo" + demo_num + ".pkl"
+    # start_q = recorder.joint_states
+    start_q = mover.joint2pose()
+    filename = "demos/2_" + demo_num + ".pkl"
 
     while not rospy.is_shutdown():
 
-        s = recorder.joint_states
+        s_joint = recorder.joint_states
+        s = mover.joint2pose()
         # print(np.asarray(s).tolist() + np.asarray(start_q).tolist())
         t_curr = time.time() - start_time
         axes, start, mode, stop = joystick.getInput()
@@ -286,7 +309,7 @@ def main():
             print("[*] Done!")
             print("[*] I recorded this many datapoints: ", len(demonstration))
             mover.switch_controller(mode='position')
-            mover.send_joint(s, 1.0)
+            mover.send_joint(s_joint, 1.0)
             return True
 
         if start and not record:
@@ -296,17 +319,18 @@ def main():
 
         curr_time = time.time()
         if record and curr_time - start_time >= steptime:
+            # print(s)
             demonstration.append(np.asarray(start_q).tolist() + np.asarray(s).tolist())
             start_time = curr_time
       
         # joystick.getAction(axes)
         # action = np.array([-0.1,0.0,0.0,0.0,0.0,0.0])
         # mover.send(action)
-        if np.linalg.norm(np.asarray(END1) - np.asarray(s)) > 0.02 and flag and record:
-            action = (np.asarray(END1) - np.asarray(s))*0.5
+        if np.linalg.norm(np.asarray(END1) - np.asarray(s_joint)) > 0.02 and flag and record:
+            action = (np.asarray(END1) - np.asarray(s_joint))*0.5
             action = np.clip(action, -0.3, 0.3)
         elif record:
-            action = (np.asarray(END2) - np.asarray(s))*0.5
+            action = (np.asarray(END2) - np.asarray(s_joint))*0.5
             action = np.clip(action, -0.3, 0.3)
             flag = False
         mover.send(action)

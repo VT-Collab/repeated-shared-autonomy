@@ -42,20 +42,24 @@ class CAE(nn.Module):
 
         # Encoder
         self.enc = nn.Sequential(
-            nn.Linear(12, 7),
+            nn.Linear(12, 10),
+            nn.Tanh(),
+            nn.Linear(10, 10),
             nn.Tanh(),
             # nn.Linear(10, 10),
             # nn.Tanh(),
-            nn.Linear(7, 1)
+            nn.Linear(10, 2)
         )
 
         # Policy
         self.dec = nn.Sequential(
-            nn.Linear(7, 30),
+            nn.Linear(8, 30),
             nn.Tanh(),
-            nn.Linear(30, 15),
+            nn.Linear(30, 30),
             nn.Tanh(),
-            nn.Linear(15, 6)
+            nn.Linear(30, 20),
+            nn.Tanh(),
+            nn.Linear(20, 6)
         )
 
     def encoder(self, x):
@@ -91,15 +95,19 @@ def train_cae(tasks):
         traj = pickle.load(open(folder + "/" + filename, "rb"))
         # print(traj)
         n_states = len(traj)
-        z = [1.0] # This is used to test the decoder capabilities
+        if filename[0] == '1':
+            z = [1.0] # This is used to test the decoder capabilities
+        elif filename[0] == '2':
+            z = [-1.0]
         # home_state = traj[0]
         for idx in range(n_states-lookahead):
             home_state = traj[idx][:6]
             position = np.asarray(traj[idx])[6:]
             nextposition = np.asarray(traj[idx + lookahead])[6:]
             for jdx in range(noisesamples):
-                action = nextposition - (position + np.random.normal(0, noiselevel, 6))
-                dataset.append((home_state + position.tolist(), position.tolist(), z, action.tolist()))
+                noise_position = (position + np.random.normal(0, noiselevel, 6))
+                action = nextposition - noise_position #(position + np.random.normal(0, noiselevel, 6))
+                dataset.append((home_state + noise_position.tolist(), noise_position.tolist(), z, action.tolist()))
 
     pickle.dump(dataset, open(savename, "wb"))
     print(dataset[0])
@@ -111,8 +119,8 @@ def train_cae(tasks):
 
     EPOCH = 500
     LR = 0.01
-    LR_STEP_SIZE = 200
-    LR_GAMMA = 0.1
+    LR_STEP_SIZE = 400
+    LR_GAMMA = 0.15
 
     train_data = MotionData(dataname)
     BATCH_SIZE_TRAIN = int(train_data.__len__() / 10.)
