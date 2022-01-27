@@ -201,14 +201,114 @@ def go2home(conn):
         return True
     elif elapsed_time >= total_time:
         return False
+# def run(conn, interface, g, iter, vae):
+#     filename = sys.argv[1]
+#     tasks = sys.argv[2]
+#     demos_savename = "demos/" + str(filename) + ".pkl"
+#     # data_savename = "runs/" + str(filename) + ".pkl"
+#     cae_model = 'models/' + '0_cae_' + str(tasks)
+#     class_model = 'models/' + '0_class_' + str(tasks)
+#     data_savename = "runs/" + str(round(g,3)) + "_" + vae + "_" + str(iter)+ ".pkl"
+#     # cae_model = 'models/' + 'cae_' + str(S_FACTOR)
+#     # class_model = 'models/' + 'class_' + str(S_FACTOR)
+#     model = Model(class_model, cae_model)
+#     # print('[*] Initializing recording...')
+#     demonstration = []
+#     data = []
+#     record = False
+#     translation_mode = True
+#     start_time = time.time()
+#     scaling_trans = 0.1
+#     scaling_rot = 0.2
+#     assist = False
+#     steptime = 0.1
 
-def run(conn, interface, gx, iter, vae):
+#     # print('[*] Main loop...')
+#     go2home(conn)
+#     # print('[*] Waiting for start...')
+#     state = readState(conn)
+#     start_q = state["q"].tolist()
+#     start_pose = joint2pose(start_q)
+#     assist_start = 1.
+#     # gstar = np.asarray([0.50, 0.02665257, 0.25038403])
+#     gstar = GOAL_D
+#     gstar[1] = g
+#     # np.asarray([0.50, gx, 0.25038403])
+#     goal = np.random.multivariate_normal(GOAL_D, SIGMA_D)
+#     start_time = time.time()
+#     assist_time = time.time()
+#     prev_pose = np.zeros(3)
+#     dist = 1
+#     qdot = [0.01]*7
+#     while True:
+
+#         state = readState(conn)
+#         s = state["q"].tolist()
+#         pose = joint2pose(state["q"])
+
+#         u, start, mode, stop = interface.input()
+#         if stop or (np.sum(np.abs(qdot)) < 0.1 and assist):
+#             dataset = {}
+#             dataset["description"] = "([elapsed_time] + [s] + [qdot_h] + [qdot_r] + [alpha]) for each traj"
+#             dataset["vae"] = vae
+#             dataset["data"] = data
+#             dataset["gstar"] = gstar
+#             pickle.dump(dataset, open( data_savename, "wb" ) )
+#             print(data[0])
+#             print("[*] Done!")
+#             print("[*] I recorded this many datapoints: ", len(demonstration))
+#             return pose
+
+#         xdot_h = np.zeros(6)
+#         # xdot_h[:3] = scaling_trans * np.asarray(u)
+#         xdot_h[:3] =  np.clip((gstar - pose), -0.1, 0.1)
+#         x_pos = joint2pose(state["q"])
+
+#         alpha = model.classify(start_pose.tolist() + x_pos.tolist() + xdot_h[:3].tolist())
+#         alpha = min(alpha, 0.85)
+#         z = model.encoder(start_pose.tolist() + x_pos.tolist())
+#         a_robot = model.decoder(z, x_pos.tolist())
+#         xdot_r = np.zeros(6)
+#         if vae == "vae":
+#             xdot_r[:3] =  25 * a_robot
+#             xdot_r[:3] = np.clip(xdot_r[:3], -0.1, 0.1)
+#         else:
+#             xdot_r[:3] = np.clip((goal - pose), -0.1, 0.1)
+#         # print("h: {}, r: {}".format(xdot_h[:3], xdot_r[:3]))
+#         curr_time = time.time()
+#         if curr_time - assist_time >= assist_start and not assist:    
+#             # print("[*] Assistance started...")
+#             assist = True
+#         # assist = False
+#         if assist:
+#             xdot = alpha * xdot_r + (1 - alpha) * xdot_h 
+#         else:
+#             xdot = xdot_h
+
+#         if x_pos[2] < 0.1 and xdot[2] < 0:
+#             xdot[2] = 0  
+
+#         qdot = xdot2qdot(xdot, state)
+#         qdot = qdot.tolist()
+        
+#         if curr_time - start_time >= steptime:
+#             s = state["q"].tolist()
+#             demonstration.append(start_q + s)
+#             elapsed_time = curr_time - assist_time
+#             qdot_h = xdot2qdot(xdot_h, state).tolist()
+#             qdot_r = xdot2qdot(xdot_r, state).tolist()
+#             data.append([elapsed_time] + [s] + [qdot_h] + [qdot_r] + [float(alpha)])
+#             start_time = curr_time
+#             print(float(alpha))
+#             # print(pose[1])
+#         send2robot(conn, state, qdot)
+def run(conn, interface, gx):
     filename = sys.argv[1]
     tasks = sys.argv[2]
     demos_savename = "demos/" + str(filename) + ".pkl"
-    data_savename = "runs/" + str(round(gx,3)) + "_" + vae + "_" + str(iter)+ ".pkl"
-    cae_model = 'models/' + 'cae'
-    class_model = 'models/' + 'class'
+    data_savename = "runs/" + str(filename) + ".pkl"
+    cae_model = 'models/' + '0_cae_' + str(tasks)
+    class_model = 'models/' + '0_class_' + str(tasks)
     model = Model(class_model, cae_model)
     # print('[*] Initializing recording...')
     demonstration = []
@@ -246,13 +346,13 @@ def run(conn, interface, gx, iter, vae):
         if stop or (np.sum(np.abs(qdot)) < 0.1 and assist):
             dataset = {}
             dataset["description"] = "([elapsed_time] + [s] + [qdot_h] + [qdot_r] + [alpha]) for each traj"
-            dataset["vae"] = vae
+            dataset["vae"] = "vae"
             dataset["data"] = data
             dataset["gstar"] = gstar
             pickle.dump(dataset, open( data_savename, "wb" ) )
-            print(data[0])
-            print("[*] Done!")
-            print("[*] I recorded this many datapoints: ", len(demonstration))
+            # print(data[0])
+            # print("[*] Done!")
+            # print("[*] I recorded this many datapoints: ", len(demonstration))
             return pose
 
         xdot_h = np.zeros(6)
@@ -262,14 +362,13 @@ def run(conn, interface, gx, iter, vae):
 
         alpha = model.classify(start_pose.tolist() + x_pos.tolist() + xdot_h[:3].tolist())
         alpha = min(alpha, 0.85)
+        # alpha = 1.
         z = model.encoder(start_pose.tolist() + x_pos.tolist())
         a_robot = model.decoder(z, x_pos.tolist())
         xdot_r = np.zeros(6)
-        if vae == "vae":
-            xdot_r[:3] =  25 * a_robot
-            xdot_r[:3] = np.clip(xdot_r[:3], -0.1, 0.1)
-        else:
-            xdot_r[:3] = np.clip((goal - pose), -0.1, 0.1)
+        # xdot_r[:3] =  25 * a_robot
+        # xdot_r[:3] = np.clip(xdot_r[:3], -0.1, 0.1)
+        xdot_r[:3] = np.clip((goal - pose), -0.1, 0.1)
         # print("h: {}, r: {}".format(xdot_h[:3], xdot_r[:3]))
         curr_time = time.time()
         if curr_time - assist_time >= assist_start and not assist:    
@@ -306,24 +405,56 @@ def main():
     interface = Joystick()
     x = []
     g_range = np.arange(-0.3,0.3,0.01)
-    vae = "vae"
+    vae = "novae"
     for gx in g_range:
         final = []
-        for iter in range(5):
-            final_state = run(conn, interface, gx, iter, vae)
+        for _ in range(5):
+            final_state = run(conn, interface, gx)
             poi = final_state[1]
             final.append(final_state)
-            print("gx: {0:1.3f} iter: {1} xreal: {2:1.3f}".format(gx,iter,poi))
+            print("g: {0:1.3f} iter: {1} xreal: {2:1.3f}".format(gx,_,poi))
         x.append(np.mean(final, axis=0).tolist())
     print([g_range, x])
     data = {}
     data["description"] = "input y and final state of the robot with " + vae
     data["data"] = [g_range, x]
     pickle.dump(data, open("final_state_" + vae +".pkl", "wb"))
-    plt.plot(g_range.tolist(), x)
-    plt.show()
+    y = [elem[1] for elem in x]
+    plt.plot(g_range.tolist(), y)
+    plt.show() 
+    #         poi = final_state[1]
+    #         final_x.append(poi)
+    #         print("gx: {0:1.3f} iter: {1} xreal: {2:1.3f}".format(gx,_,poi))
+    #     x.append(np.mean(final_x))
+    # pickle.dump([g_range, x], open("final_state_novae.pkl", "wb"))
+    # plt.plot(g_range.tolist(), x)
+    # plt.show()
 
-        
+# def main():
+#     print('[*] Connecting to low-level controller...')
+#     PORT = 8080
+#     conn = connect2robot(PORT)
+#     interface = Joystick()
+#     x = []
+#     step = 0.01
+#     g_range = np.arange(-0.3,0.3+step,step)
+#     vae = "novae"
+#     for g in g_range:
+#         final = []
+#         for iter in range(1):
+#             final_state = run(conn, interface, g, iter, vae)
+#             poi = final_state[1]
+#             final.append(final_state)
+#             print("g: {0:1.3f} iter: {1} xreal: {2:1.3f}".format(g,iter,poi))
+#         x.append(np.mean(final, axis=0).tolist())
+#     print([g_range, x])
+#     data = {}
+#     data["description"] = "input y and final state of the robot with " + vae
+#     data["data"] = [g_range, x]
+#     pickle.dump(data, open("final_state_" + vae +".pkl", "wb"))
+#     y = [elem[1] for elem in x]
+#     plt.plot(g_range.tolist(), y)
+#     plt.show()        
 
 if __name__ == "__main__":
     main()
