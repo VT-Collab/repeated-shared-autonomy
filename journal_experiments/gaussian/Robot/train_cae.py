@@ -18,7 +18,8 @@ if device == "cuda":
 class MotionData(Dataset):
 
     def __init__(self, filename):
-        self.data = pickle.load(open(filename, "rb"))
+        dataset = pickle.load(open(filename, "rb"))
+        self.data = dataset["dataset"]
 
     def __len__(self):
         return len(self.data)
@@ -99,41 +100,37 @@ def joint2pose(q):
 
 # train cAE
 def main():
-    tasks = int(sys.argv[1])
-
     dataset = []
     folder = 'demos'
     lookahead = 5
     noiselevel = 0.05
     noisesamples = 5
-
-    notepad_count = 0
-    tape_count = 0
-    glass_count = 0
-    shelf_count = 0
-    cup_count = 0
-    savename = 'data/' + '0_cae_' + str(tasks) + '.pkl'
+    action_multiplier = 5
+    savename = 'data/' + 'cae' + '.pkl'
     for filename in os.listdir(folder):
-        demo = pickle.load(open(folder + "/" + filename, "rb"))
-        traj = [item[0] for item in demo]
-        # print(traj)
-        n_states = len(traj)
-        z = [1.0]
-        for idx in range(n_states-lookahead):
-            home_state = traj[idx][:3]
-            position = traj[idx][3:]
-            nextposition = traj[idx + lookahead][3:]
-            for jdx in range(noisesamples):
-                action = 5 * (nextposition - (position + np.random.normal(0, noiselevel, 3)))
-                dataset.append((home_state + position, position, z, action.tolist()))
-
-    pickle.dump(dataset, open(savename, "wb"))
+        if filename[0] != ".":
+            demo = pickle.load(open(folder + "/" + filename, "rb"))
+            traj = [item[0] for item in demo]
+            # print(traj)
+            n_states = len(traj)
+            z = [1.0]
+            for idx in range(n_states-lookahead):
+                home_state = traj[idx][:3]
+                position = traj[idx][3:]
+                nextposition = traj[idx + lookahead][3:]
+                for jdx in range(noisesamples):
+                    action = action_multiplier * (nextposition - (position + np.random.normal(0, noiselevel, 3)))
+                    dataset.append((home_state + position, position, z, action.tolist()))
+    data = {}
+    data["action_multiplier"] = action_multiplier
+    data["dataset"] = dataset
+    pickle.dump(data, open(savename, "wb"))
     print(dataset[0])
     print("[*] I have this many subtrajectories: ", len(dataset))
 
     model = CAE().to(device)
-    dataname = 'data/' + '0_cae_' + str(tasks) + '.pkl'
-    savename = 'models/' + '0_cae_' + str(tasks)
+    dataname = 'data/' + 'cae' + '.pkl'
+    savename = 'models/' + 'cae'
 
     EPOCH = 500
     LR = 0.01
@@ -142,7 +139,6 @@ def main():
 
     train_data = MotionData(dataname)
     BATCH_SIZE_TRAIN = int(train_data.__len__() / 10.)
-    # print(BATCH_SIZE_TRAIN)
     train_set = DataLoader(dataset=train_data, batch_size=BATCH_SIZE_TRAIN, shuffle=True)
 
     optimizer = optim.Adam(model.parameters(), lr=LR)

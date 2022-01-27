@@ -206,9 +206,9 @@ def run(conn, interface, gx, iter, vae):
     filename = sys.argv[1]
     tasks = sys.argv[2]
     demos_savename = "demos/" + str(filename) + ".pkl"
-    data_savename = "runs/" + str(gx) + "_" + vae + "_" + str(iter)+ ".pkl"
-    cae_model = 'models/' + '0_cae_' + str(tasks)
-    class_model = 'models/' + '0_class_' + str(tasks)
+    data_savename = "runs/" + str(round(gx,3)) + "_" + vae + "_" + str(iter)+ ".pkl"
+    cae_model = 'models/' + 'cae'
+    class_model = 'models/' + 'class'
     model = Model(class_model, cae_model)
     # print('[*] Initializing recording...')
     demonstration = []
@@ -244,7 +244,12 @@ def run(conn, interface, gx, iter, vae):
 
         u, start, mode, stop = interface.input()
         if stop or (np.sum(np.abs(qdot)) < 0.1 and assist):
-            pickle.dump(data, open( data_savename, "wb" ) )
+            dataset = {}
+            dataset["description"] = "([elapsed_time] + [s] + [qdot_h] + [qdot_r] + [alpha]) for each traj"
+            dataset["vae"] = vae
+            dataset["data"] = data
+            dataset["gstar"] = gstar
+            pickle.dump(dataset, open( data_savename, "wb" ) )
             print(data[0])
             print("[*] Done!")
             print("[*] I recorded this many datapoints: ", len(demonstration))
@@ -257,7 +262,6 @@ def run(conn, interface, gx, iter, vae):
 
         alpha = model.classify(start_pose.tolist() + x_pos.tolist() + xdot_h[:3].tolist())
         alpha = min(alpha, 0.85)
-        # alpha = 1.
         z = model.encoder(start_pose.tolist() + x_pos.tolist())
         a_robot = model.decoder(z, x_pos.tolist())
         xdot_r = np.zeros(6)
@@ -312,7 +316,10 @@ def main():
             print("gx: {0:1.3f} iter: {1} xreal: {2:1.3f}".format(gx,iter,poi))
         x.append(np.mean(final, axis=0).tolist())
     print([g_range, x])
-    pickle.dump([g_range, x], open("final_state_" + vae +".pkl", "wb"))
+    data = {}
+    data["description"] = "input y and final state of the robot with " + vae
+    data["data"] = [g_range, x]
+    pickle.dump(data, open("final_state_" + vae +".pkl", "wb"))
     plt.plot(g_range.tolist(), x)
     plt.show()
 

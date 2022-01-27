@@ -114,68 +114,54 @@ def joint2pose(q):
 # train cAE
 def main():
 
-    tasks = int(sys.argv[1])
-
     dataset = []
     folder = 'demos'
-    lookahead = 0
-    noiselevel = 0.00
-    # noisesamples = 3
 
     true_cnt = 0
     false_cnt = 0
+    deformed_samples = 10
 
-    notepad_count = 0
-    soupcan_count = 0
-    tape_count = 0
-    cup_count = 0
-    traj_cnt = 0
-    shelf_count = 0
-
-    savename = 'data/' + '0_class_' + str(tasks) + '.pkl'
-    deformed_trajs = []
+    savename = 'data/' + 'class_' + str(deformed_samples) + '.pkl'
     for filename in os.listdir(folder):
-        demo = pickle.load(open(folder + "/" + filename, "rb"))
-        traj = [item[0] for item in demo]
-        action = [item[1] for item in demo]
-        n_states = len(traj)
-        z = [1.0]
-        for idx in range(n_states):
-            home_state = traj[idx][:3]
-            position = traj[idx][3:]
-            traj_type = 0
-            dataset.append((home_state + position + action[idx], position, z, action[idx], traj_type))
-            true_cnt += 1
-        snippets = np.array_split(traj, 1)
-        deformed_samples = 2
-        for snip in snippets:
-            tau = np.random.uniform([-0.1]*3, [0.1]*3)
-            deform_len = len(snip)
-            # print(deform_len)
-            start = 0
-            for i in range(deformed_samples):
-                snip_deformed = deform(snip[:,3:], 0, deform_len, tau)
-                deformed_trajs.append(snip_deformed)
-                snip[:,3:] = snip_deformed
-                # fake data
-                n_states = len(snip)
-                for idx in range(start, deform_len):
-                    home_state = snip[idx][:3].tolist()
-                    position = snip[idx][3:] 
-                    #position = position + np.random.normal(0, noiselevel, 7)
-                    traj_type = 1
-                    dataset.append((home_state + position.tolist() + action[idx], position.tolist(), z, action[idx], traj_type))
-                    false_cnt += 1
-                    # print(dataset[-1])
-    pickle.dump(deformed_trajs, open("deformed_trajs.pkl", "wb"))
-    pickle.dump(dataset, open(savename, "wb"))
+        if filename[0] != ".":
+            demo = pickle.load(open(folder + "/" + filename, "rb"))
+            traj = [item[0] for item in demo]
+            action = [item[1] for item in demo]
+            n_states = len(traj)
+            z = [1.0]
+            for idx in range(n_states):
+                home_state = traj[idx][:3]
+                position = traj[idx][3:]
+                traj_type = 0
+                dataset.append((home_state + position + action[idx], position, z, action[idx], traj_type))
+                true_cnt += 1
+            snippets = np.array_split(traj, 1)
+            for snip in snippets:
+                tau = np.random.uniform([-0.1]*3, [0.1]*3)
+                deform_len = len(snip)
+                start = 0
+                for i in range(deformed_samples):
+                    snip_deformed = deform(snip[:,3:], 0, deform_len, tau)
+                    snip[:,3:] = snip_deformed
+                    # fake data
+                    n_states = len(snip)
+                    for idx in range(start, deform_len):
+                        home_state = snip[idx][:3].tolist()
+                        position = snip[idx][3:] 
+                        traj_type = 1
+                        dataset.append((home_state + position.tolist() + action[idx], position.tolist(), z, action[idx], traj_type))
+                        false_cnt += 1
+    data = {}
+    data['deform_samples'] = 10
+    data["dataset"] = dataset
+    pickle.dump(data, open(savename, "wb"))
     print(dataset[-1])
     print("[*] I have this many subtrajectories: ", len(dataset))
     print("[*] false count: " + str(false_cnt) + " true: " + str(true_cnt))
 
     model = Net().to(device)
-    dataname = 'data/' + '0_class_' + str(tasks) + '.pkl'
-    savename = 'models/' + '0_class_' + str(tasks)
+    dataname = 'data/' + 'class_' + str(deformed_samples) + '.pkl'
+    savename = 'models/' + 'class'
 
     EPOCH = 500
     # BATCH_SIZE_TRAIN = 10000
@@ -183,8 +169,8 @@ def main():
     LR_STEP_SIZE = 200
     LR_GAMMA = 0.1
 
-
-    raw_data = pickle.load(open(dataname, "rb"))
+    data = pickle.load(open(dataname, "rb"))
+    raw_data = data["dataset"]
     raw_data = random.sample(raw_data, len(raw_data))
     # raw_data = raw_data.tolist()
     inputs = [element[:4] for element in raw_data]
