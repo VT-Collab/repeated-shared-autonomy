@@ -21,7 +21,7 @@ torch.cuda.empty_cache()
 # Storing some important states
 HOME = np.asarray([0.022643, -0.789077, -0.000277, -2.358605, -0.005446, 1.573151, -0.708887])
 GOAL_D = np.asarray([0.50, 0.02665257, 0.25038403])
-SIGMA_D = np.identity(3) * 0.001
+SIGMA_D = np.identity(3) * 0.0001
 
 GOAL_H = np.asarray([0.50, 0.02665257, 0.25038403])
 Q_MAX = [2.8, 1.7, 2.8, -0.75, 2.8, 3.7, 2.8]
@@ -202,11 +202,11 @@ def go2home(conn):
     elif elapsed_time >= total_time:
         return False
 
-def run(conn, interface, gx):
+def run(conn, interface, gx, vae, iter):
     filename = sys.argv[1]
     tasks = sys.argv[2]
     demos_savename = "demos/" + str(filename) + ".pkl"
-    data_savename = "runs/" + str(filename) + ".pkl"
+    data_savename = "runs/" + str(round(gx,3)) + "_" + vae + "_" + str(iter)+ ".pkl"
     cae_model = 'models/' + '0_cae_' + str(tasks)
     class_model = 'models/' + '0_class_' + str(tasks)
     model = Model(class_model, cae_model)
@@ -244,11 +244,15 @@ def run(conn, interface, gx):
 
         u, start, mode, stop = interface.input()
         if stop or (np.sum(np.abs(qdot)) < 0.1 and assist):
-            # pickle.dump( demonstration, open( demos_savename, "wb" ) )
-            # pickle.dump(data, open( data_savename, "wb" ) )
-            # print(data[0])
-            # print("[*] Done!")
-            # print("[*] I recorded this many datapoints: ", len(demonstration))
+            dataset = {}
+            dataset["description"] = "([elapsed_time] + [s] + [qdot_h] + [qdot_r] + [alpha]) for each traj"
+            dataset["vae"] = vae
+            dataset["data"] = data
+            dataset["gstar"] = gstar
+            pickle.dump(dataset, open( data_savename, "wb" ) )
+            print(data[0])
+            print("[*] Done!")
+            print("[*] I recorded this many datapoints: ", len(demonstration))
             return pose
 
         xdot_h = np.zeros(6)
@@ -262,9 +266,11 @@ def run(conn, interface, gx):
         z = model.encoder(start_pose.tolist() + x_pos.tolist())
         a_robot = model.decoder(z, x_pos.tolist())
         xdot_r = np.zeros(6)
-        xdot_r[:3] =  25 * a_robot
-        xdot_r[:3] = np.clip(xdot_r[:3], -0.1, 0.1)
-        # xdot_r[:3] = np.clip((goal - pose), -0.1, 0.1)
+        if vae == "vae":
+            xdot_r[:3] =  10 * a_robot
+            xdot_r[:3] = np.clip(xdot_r[:3], -0.1, 0.1)
+        else:
+            xdot_r[:3] = np.clip((goal - pose), -0.1, 0.1)
         # print("h: {}, r: {}".format(xdot_h[:3], xdot_r[:3]))
         curr_time = time.time()
         if curr_time - assist_time >= assist_start and not assist:    
@@ -300,17 +306,19 @@ def main():
     conn = connect2robot(PORT)
     interface = Joystick()
     x = []
-    g_range = np.arange(-0.3,0.3,0.01)
+    g_range = np.arange(-0.3,0.31,0.01)
+    vae = "vae"
     for gx in g_range:
-        final_x = []
+        final = []
         for _ in range(5):
-            final_state = run(conn, interface, gx)
+            final_state = run(conn, interface, gx, vae, _)
             poi = final_state[1]
-            final_x.append(poi)
+            final.append(final_state)
             print("gx: {0:1.3f} iter: {1} xreal: {2:1.3f}".format(gx,_,poi))
-        x.append(np.mean(final_x))
-    pickle.dump([g_range, x], open("final_state.pkl", "wb"))
-    plt.plot(g_range.tolist(), x)
+        x.append(np.mean(final, axis=0).tolist())
+    pickle.dump([g_range, x], open("final_state_" + vae + ".pkl", "wb"))
+    y = [elem[1] for elem in x]
+    plt.plot(g_range.tolist(), y)
     plt.show()
 
         
