@@ -11,7 +11,7 @@ import torch.nn as nn
 from train_cae import CAE
 from train_classifier import Net
 import torch.nn.functional as F
-
+from record_demos import GOAL, SIGMA
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Clear GPU
@@ -48,25 +48,21 @@ class Model(object):
 
 
 def run(gstar, iter, vae):
-    filename = sys.argv[1]
-    tasks = sys.argv[2]
-    demos_savename = "demos/" + str(filename) + ".pkl"
-    data_savename = "runs/" + str(gstar) + "_" + vae + "_" + str(iter)+ ".pkl"
-    cae_model = 'models/' + '0_cae_' + str(tasks)
-    class_model = 'models/' + '0_class_' + str(tasks)
+    cae_model = 'models/' + 'cae_' + str(GOAL)
+    class_model = 'models/' + 'class_' + str(GOAL)
     model = Model(class_model, cae_model)
-    # print('[*] Initializing recording...')
     demonstration = []
     data = []
 
     state = 0
-    # goal = np.random.multivariate_normal(GOAL_D, SIGMA_D)
-    sigma_h = .1
-    sigma_d = .1
+    sigma_h = SIGMA
+    sigma_d = SIGMA
     a_h = np.random.normal(gstar-state, sigma_h)
-    # a_r = np.random.normal(.5-state, sigma_d)
-    z = model.encoder([state, 1.0])
-    a_r = model.decoder(z, [state, 1.0])
+    if vae == "vae":
+        z = model.encoder([state, 1.0])
+        a_r = model.decoder(z, [state, 1.0])
+    else:
+        a_r = np.random.normal(GOAL-state, sigma_d)
     alpha = model.classify([state, a_h])
     alpha = min(alpha, 0.85)
     # print("a_h:{} alpha:{}".format(a_h, alpha))
@@ -75,28 +71,27 @@ def run(gstar, iter, vae):
 
 def main():
     x = []
-    g_range = np.arange(0,1.01,0.01)
+    g_range = np.arange(0,GOAL*2+SIGMA/10.,SIGMA/10.)
     vae = "novae"
+    max_iters = 10000
     avg_state = []
     for gx in g_range:
         final_state = []
-        for iter in range(1000):
+        for iter in range(max_iters):
             res = run(gx, iter, vae)
             final_state.append(res[0])
         avg_state.append(np.mean(final_state))
-    #         poi = final_state[1]
-    #         final.append(final_state)
-    #         print("gx: {0:1.3f} iter: {1} xreal: {2:1.3f}".format(gx,iter,poi))
-    #     x.append(np.mean(final, axis=0).tolist())
-    # print([g_range, x])
-    # pickle.dump([g_range, x], open("final_state.pkl", "wb"))
     err = g_range - avg_state
     err = err.tolist()
-    pickle.dump(err, open("err_vs_gstar_vae.pkl", "wb"))
+    data = {}
+    data["description"] = "1D error and gstar"
+    data["avg_state"] = avg_state
+    data["error"] = err
+    data["vae"] = vae
+    data["max_iters"] = max_iters
+    pickle.dump(data, open("err_vs_gstar_" + vae + "_" + str(GOAL) + ".pkl", "wb"))
     plt.plot(g_range.tolist(), err)
-    plt.show()
-
-        
+    plt.show()     
 
 if __name__ == "__main__":
     main()

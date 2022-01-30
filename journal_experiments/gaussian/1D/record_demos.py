@@ -6,8 +6,8 @@ import pygame
 import sys
 import random
 
-GOAL = .5
-SIGMA = .1
+GOAL = 5
+SIGMA = 1
 def generate_demo(filename):
         savename = "demos/" + str(filename) + ".pkl"
         state = np.zeros(filename)

@@ -7,7 +7,7 @@ import random
 import numpy as np
 import sys
 import os
-
+from record_demos import GOAL, SIGMA
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Clear GPU memory from previous runs
@@ -18,8 +18,8 @@ if device == "cuda":
 class MotionData(Dataset):
 
     def __init__(self, filename):
-        self.data = pickle.load(open(filename, "rb"))
-
+        self.dataset = pickle.load(open(filename, "rb"))
+        self.data = self.dataset["dataset"]
     def __len__(self):
         return len(self.data)
 
@@ -66,7 +66,6 @@ class CAE(nn.Module):
         state, action = x
         z = self.encoder(state)
         z_with_state = torch.cat((z, state), 1)
-        print(state)
         action_decoded = self.decoder(z_with_state)
         loss = self.loss(action, action_decoded)
         return loss
@@ -76,23 +75,24 @@ class CAE(nn.Module):
 
 # train cAE
 def main():
-    tasks = int(sys.argv[1])
-
     dataset = []
     folder = 'demos'
 
-    savename = 'data/' + '0_cae_' + str(tasks) + '.pkl'
+    savename = 'data/' + 'cae_' + str(GOAL) + '.pkl'
     for filename in os.listdir(folder):
         if filename[0] != ".":
             dataset = pickle.load(open(folder + "/" + filename, "rb"))
-
-    pickle.dump(dataset, open(savename, "wb"))
+    data = {}
+    data["goal"] = GOAL
+    data["sigma"] = SIGMA
+    data["dataset"] = dataset
+    pickle.dump(data, open(savename, "wb"))
     print(dataset[0])
     print("[*] I have this many subtrajectories: ", len(dataset))
 
     model = CAE().to(device)
-    dataname = 'data/' + '0_cae_' + str(tasks) + '.pkl'
-    savename = 'models/' + '0_cae_' + str(tasks)
+    dataname = 'data/' + 'cae_' + str(GOAL) + '.pkl'
+    savename = 'models/' + 'cae_' + str(GOAL)
 
     EPOCH = 500
     LR = 0.01
@@ -101,7 +101,6 @@ def main():
 
     train_data = MotionData(dataname)
     BATCH_SIZE_TRAIN = int(train_data.__len__() / 10.)
-    # print(BATCH_SIZE_TRAIN)
     train_set = DataLoader(dataset=train_data, batch_size=BATCH_SIZE_TRAIN, shuffle=True)
 
     optimizer = optim.Adam(model.parameters(), lr=LR)
@@ -114,7 +113,7 @@ def main():
             loss.backward()
             optimizer.step()
         scheduler.step()
-        # print(epoch, loss.item())
+        print(epoch, loss.item())
         torch.save(model.state_dict(), savename)
 
 

@@ -8,7 +8,8 @@ import numpy as np
 from sklearn.utils import shuffle
 import sys
 import os
-import copy 
+import copy
+from record_demos import GOAL, SIGMA 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Clear GPU memory from previous runs
@@ -21,7 +22,6 @@ class MotionData(Dataset):
     def __init__(self, x, y):
         self.data = x
         self.target = y
-        # self.data, self.target = shuffle(self.data, self.target)
         self.target = torch.as_tensor(self.target).to(device)
 
     def __len__(self):
@@ -45,7 +45,6 @@ class Net(nn.Module):
         self.classifier = nn.Sequential(
             nn.Linear(2, 5),
             nn.Tanh(),
-            # nn.Dropout(0.1),
             nn.Linear(5, 5),
             nn.Tanh(),
             nn.Linear(5, 2)
@@ -65,19 +64,16 @@ class Net(nn.Module):
         return self.loss_func(output, target)
 
 def main():
-    tasks = int(sys.argv[1])
-
     dataset = []
     folder = 'demos'
 
     true_cnt = 0
     false_cnt = 0
-    savename = 'data/' + '0_class_' + str(tasks) + '.pkl'
+    savename = 'data/' + 'class_' + str(GOAL) + '.pkl'
     for filename in os.listdir(folder):
         if filename[0] != ".":
             demo = pickle.load(open(folder + "/" + filename, "rb"))
             traj_type = 0
-            print(demo)
             for pair in demo:
                 dataset.append((pair, traj_type))
                 true_cnt += 1
@@ -89,29 +85,29 @@ def main():
                     traj_type = 1
                     dataset.append((s.tolist(), traj_type))
                     false_cnt += 1
-            # print(dataset[-1])
-    pickle.dump(dataset, open(savename, "wb"))
-    print(dataset[-1])
+    data = {}
+    data["goal"] = GOAL
+    data["sigma"] = SIGMA
+    data["dataset"] = dataset
+    pickle.dump(data, open(savename, "wb"))
+    print(data["dataset"][-1])
     print("[*] I have this many subtrajectories: ", len(dataset))
     print("[*] false count: " + str(false_cnt) + " true: " + str(true_cnt))
 
     model = Net().to(device)
-    dataname = 'data/' + '0_class_' + str(tasks) + '.pkl'
-    savename = 'models/' + '0_class_' + str(tasks)
+    dataname = 'data/' + 'class_' + str(GOAL) + '.pkl'
+    savename = 'models/' + 'class_' + str(GOAL)
 
     EPOCH = 500
-    # BATCH_SIZE_TRAIN = 10000
     LR = 0.005
     LR_STEP_SIZE = 200
     LR_GAMMA = 0.1
 
-
-    raw_data = pickle.load(open(dataname, "rb"))
+    dataset = pickle.load(open(dataname, "rb"))
+    raw_data = dataset["dataset"]
     raw_data = random.sample(raw_data, len(raw_data))
-    # raw_data = raw_data.tolist()
     inputs = [element[0] for element in raw_data]
     targets = [element[1] for element in raw_data]
-    # print(inputs[0])
 
     train_data = MotionData(inputs, targets)
     BATCH_SIZE_TRAIN = int(train_data.__len__() / 10.)
