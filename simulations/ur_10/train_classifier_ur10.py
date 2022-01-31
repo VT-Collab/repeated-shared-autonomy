@@ -100,7 +100,7 @@ def deform(xi, start, length, tau):
 # train cAE
 def train_classifier(tasks):
 
-    # tasks = int(sys.argv[1])
+    tasks = sys.argv[1]
     # tasks = int(tasks)
 
     dataset = []

@@ -81,24 +81,25 @@ class CAE(nn.Module):
 
 # train cAE
 def train_cae(tasks):
-    # tasks = int(sys.argv[1])
+    tasks = sys.argv[1]
     # tasks = int(tasks)
 
     dataset = []
     folder = 'demos'
     lookahead = 5
     noiselevel = 0.005
-    noisesamples = 5
+    noisesamples = 20
 
     savename = 'data/' + 'cae_' + str(tasks) + '.pkl'
     for filename in os.listdir(folder):
         traj = pickle.load(open(folder + "/" + filename, "rb"))
         # print(traj)
         n_states = len(traj)
-        if filename[0] == '1':
-            z = [1.0] # This is used to test the decoder capabilities
-        elif filename[0] == '2':
-            z = [-1.0]
+        # if filename[0] == '1':
+        #     z = [1.0] # This is used to test the decoder capabilities
+        # elif filename[0] == '2':
+        #     z = [-1.0]
+        z = [1.0]
         # home_state = traj[0]
         for idx in range(n_states-lookahead):
             home_state = traj[idx][:6]

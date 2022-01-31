@@ -332,7 +332,7 @@ def main():
     print("[*] Ready for joystick inputs")
 
 
-    demos = "pushing"
+    demos = sys.argv[1]
     cae_model = 'models/' + 'cae_' + str(demos)
     class_model = 'models/' + 'class_' + str(demos)
     model = Model(class_model, cae_model)
@@ -374,7 +374,11 @@ def main():
             print('[*] Recording the demonstration...')
 
         xdot_h = np.zeros(6)
-        xdot_h[:3] = scaling_trans * np.asarray(axes)
+        if mode:
+            xdot_h[3:] = scaling_trans * np.asarray(axes)
+        else:
+            xdot_h[:3] = scaling_trans * np.asarray(axes)
+            
         qdot_h = mover.xdot2qdot(xdot_h)
         qdot_h = qdot_h.tolist()
         # if np.linalg.norm(np.asarray(END1) - np.asarray(s_joint)) > 0.02 and flag and record:
@@ -390,8 +394,8 @@ def main():
 
 
         alpha = model.classify(start_q + s)
-        alpha = np.clip(alpha, 0.0, 0.7)
-        alpha = 0.5
+        alpha = np.clip(alpha, 0.0, 0.6)
+        # alpha = 0.5
         z = model.encoder(start_q + s)
         
         a_robot = model.decoder(z, s)
@@ -411,6 +415,7 @@ def main():
 
         if assist:
             qdot = (alpha * 1.0 * np.asarray(qdot_r) + (1-alpha) * np.asarray(qdot_h))*2.0
+            qdot = np.clip(qdot, -0.3, 0.3)
             qdot = qdot.tolist()
             qdot = qdot[0]
         else:
@@ -429,7 +434,7 @@ def main():
             data.append([elapsed_time] + [s] + [qdot_h] + [qdot_r] + [float(alpha)])
             print(z)
             start_time = curr_time
-            # print(float(alpha))
+            print(float(alpha))
             # print("qdot = {}, qdot_r = {}" .format(qdot,qdot_r))
       
         # joystick.getAction(axes)
