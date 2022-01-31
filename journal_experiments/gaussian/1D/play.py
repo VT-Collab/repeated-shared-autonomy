@@ -72,7 +72,7 @@ def run(gstar, iter, vae):
 def main():
     x = []
     g_range = np.arange(0,GOAL*2+SIGMA/10.,SIGMA/10.)
-    vae = "novae"
+    vae = "vae"
     max_iters = 10000
     avg_state = []
     for gx in g_range:
