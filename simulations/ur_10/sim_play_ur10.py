@@ -59,8 +59,12 @@ from geometry_msgs.msg import(
 )
 
 HOME = [-1.571, -1.18997, -2.0167, -1.3992, 1.5407, 0.0]
-END1 = [-1.6811960379229944, -1.5710356871234339, -2.2512028853045862, -0.6734879652606409, 1.5406923294067383, 1.1984225238848012e-05]
-END2 = [-1.5708683172809046, -2.1604259649859827, -1.5543845335589808, -0.8909743467914026, 1.5406923294067383, 0.00022770027862861753]
+END1 = [-1.571, -1.5710356871234339, -2.2512028853045862, -0.6734879652606409, 1.5406923294067383, 1.1984225238848012e-05]
+END2 = [-1.571, -2.1604259649859827, -1.5543845335589808, -0.8909743467914026, 1.5406923294067383, 0.00022770027862861753]
+# END1 = [-1.6811960379229944, -1.5710356871234339, -2.2512028853045862, -0.6734879652606409, 1.5406923294067383, 1.1984225238848012e-05]
+# END2 = [-1.5708683172809046, -2.1604259649859827, -1.5543845335589808, -0.8909743467914026, 1.5406923294067383, 0.00022770027862861753]
+# END1 = [-0.800208870564596, -1.789145294819967, -2.005460564290182, -0.8623107115374964, 1.4747997522354126, 0.769659161567688]
+# END2 = [-1.0631392637835901, -2.302997414265768, -1.2114885489093226, -1.119192902241842, 1.4926565885543823, 0.5063522458076477]
 
 STEP_SIZE_L = 0.15
 STEP_SIZE_A = 0.2 * np.pi / 4
@@ -163,6 +167,7 @@ class TrajectoryClient(object):
         self.base_link = "base_link"
         self.end_link = "wrist_3_link"
         self.joint_states = None
+        self.cartesian_pose = None
         self.robot_urdf = URDF.from_parameter_server()
         self.kdl_kin = KDLKinematics(self.robot_urdf, self.base_link, self.end_link)
         
@@ -213,6 +218,25 @@ class TrajectoryClient(object):
             rospy.logwarn('Unkown mode for the controller!')
 
         res = self.switch_controller_cli.call(req)
+
+
+    def joint2pose(self):
+        state = self.kdl_kin.forward(self.joint_states)
+        xyz_lin = np.array(state[:,3][:3]).T
+        xyz_lin = xyz_lin.tolist()
+        R = state[:,:3][:3]
+        beta = -np.arcsin(R[2,0])
+        alpha = np.arctan2(R[2,1]/np.cos(beta),R[2,2]/np.cos(beta))
+        gamma = np.arctan2(R[1,0]/np.cos(beta),R[0,0]/np.cos(beta))
+        xyz_ang = [alpha, beta, gamma]
+        xyz = xyz = np.asarray(xyz_lin[-1]).tolist() + np.asarray(xyz_ang).tolist()
+        # print(xyz)
+        # print(r.as_euler('xyz'))
+
+        return xyz#self.kdl_kin.forward(self.joint_states)
+
+    def pose2joint(self, pose):
+        return self.kdl_kin.inverse(pose, self.joint_states)
 
     def xdot2qdot(self, xdot):
         J = self.kdl_kin.jacobian(self.joint_states)
@@ -308,7 +332,7 @@ def main():
     print("[*] Ready for joystick inputs")
 
 
-    demos = "pushing"
+    demos = sys.argv[1]
     cae_model = 'models/' + 'cae_' + str(demos)
     class_model = 'models/' + 'class_' + str(demos)
     model = Model(class_model, cae_model)
@@ -321,15 +345,16 @@ def main():
     scaling_trans = 0.1
     scaling_rot = 0.2
     assist = False
-    assist_start = 3.0
+    assist_start = 5.0
     action = np.array([0.0,0.0,0.0,0.0,0.0,0.0])
-    start_q = np.asarray(recorder.joint_states).tolist()
+    start_q = mover.joint2pose()
     # qdot = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
     # filename = "demo" + demo_num + ".pkl"
 
     while not rospy.is_shutdown():
 
-        s = np.asarray(recorder.joint_states).tolist()
+        s_joint = np.asarray(recorder.joint_states).tolist()
+        s = mover.joint2pose()
         # print(np.asarray(s).tolist() + np.asarray(start_q).tolist())
         t_curr = time.time() - start_time
         axes, start, mode, stop = joystick.getInput()
@@ -339,7 +364,7 @@ def main():
             print("[*] Done!")
             print("[*] I recorded this many datapoints: ", len(demonstration))
             mover.switch_controller(mode='position')
-            mover.send_joint(s, 5.0)
+            mover.send_joint(s_joint, 1.0)
             return True
 
         if start and not record:
@@ -349,27 +374,35 @@ def main():
             print('[*] Recording the demonstration...')
 
         xdot_h = np.zeros(6)
-        xdot_h[:3] = scaling_trans * np.asarray(axes)
+        if mode:
+            xdot_h[3:] = scaling_trans * np.asarray(axes)
+        else:
+            xdot_h[:3] = scaling_trans * np.asarray(axes)
+            
         qdot_h = mover.xdot2qdot(xdot_h)
         qdot_h = qdot_h.tolist()
-        # if np.linalg.norm(np.asarray(END1) - np.asarray(s)) > 0.02 and flag and record:
-        #     action = (np.asarray(END1) - np.asarray(s))*0.5
+        # if np.linalg.norm(np.asarray(END1) - np.asarray(s_joint)) > 0.02 and flag and record:
+        #     action = (np.asarray(END1) - np.asarray(s_joint))*0.25
         #     action = np.clip(action, -0.3, 0.3)
         # elif record:
-        #     action = (np.asarray(END2) - np.asarray(s))*0.5
+        #     action = (np.asarray(END2) - np.asarray(s_joint))*0.25
         #     action = np.clip(action, -0.3, 0.3)
         #     flag = False
-
-        # qdot_h = action*0.1
+        # qdot_h = action*0.5
         # # print(qdot_h)
         # qdot_h = qdot_h.tolist()
 
+
         alpha = model.classify(start_q + s)
-        alpha = np.clip(alpha, 0.0, 0.7)
+        alpha = np.clip(alpha, 0.0, 0.6)
+        # alpha = 0.5
         z = model.encoder(start_q + s)
+        
         a_robot = model.decoder(z, s)
+        a_robot = mover.xdot2qdot(a_robot)
         qdot_r = np.zeros(6)
         qdot_r = 1*a_robot
+        qdot_r = qdot_r.tolist()
 
 
         curr_time = time.time()
@@ -377,29 +410,40 @@ def main():
             print("Assistance Started...")
             assist = True
             demonstration.append(np.asarray(start_q).tolist() + np.asarray(s).tolist())
+            
             start_time = curr_time
 
         if assist:
-            qdot = alpha * 2.5 * qdot_r + (1-alpha) * np.asarray(qdot_h)
+            qdot = (alpha * 1.0 * np.asarray(qdot_r) + (1-alpha) * np.asarray(qdot_h))*2.0
+            qdot = np.clip(qdot, -0.3, 0.3)
+            qdot = qdot.tolist()
+            qdot = qdot[0]
         else:
             qdot = qdot_h
+            qdot = qdot[0]
+
+        # qdot = np.clip(qdot, -0.2,0.2)
 
         if record and curr_time - start_time >= steptime:
+            # print(s_cart)
+            # print(s_cart[:,:3][:3])
             demonstration.append(start_q + s)
             elapsed_time = curr_time - assist_time
             qdot_h = qdot_h
-            qdot_r = qdot_r.tolist()
+            qdot_r = qdot_r
             data.append([elapsed_time] + [s] + [qdot_h] + [qdot_r] + [float(alpha)])
+            print(z)
             start_time = curr_time
             print(float(alpha))
-            print("qdot = {}, qdot_r = {}" .format(qdot,qdot_r))
+            # print("qdot = {}, qdot_r = {}" .format(qdot,qdot_r))
       
         # joystick.getAction(axes)
         # action = np.array([-0.1,0.0,0.0,0.0,0.0,0.0])
         # mover.send(action)
         
         # print(qdot)
-        mover.send(qdot[0])
+        
+        mover.send(qdot)
         rate.sleep()
 
 if __name__ == "__main__":
