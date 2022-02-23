@@ -351,7 +351,7 @@ def main():
 
     while not rospy.is_shutdown():
 
-        s_joint = np.asarray(recorder.joint_states).tolist()
+        s_joint = np.asarray(mover.joint_states).tolist()
         s = mover.joint2pose()
         # print(np.asarray(s).tolist() + np.asarray(start_q).tolist())
         t_curr = time.time() - start_time

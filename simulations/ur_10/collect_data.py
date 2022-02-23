@@ -11,8 +11,9 @@ from urdf_parser_py.urdf import URDF
 from pykdl_utils.kdl_kinematics import KDLKinematics
 import copy
 from collections import deque
-
+from sim_play_ur10 import Model
 from std_msgs.msg import Float64MultiArray, String
+from gen_data import tasks
 
 from robotiq_2f_gripper_msgs.msg import (
     CommandRobotiqGripperFeedback, 
@@ -49,49 +50,8 @@ from geometry_msgs.msg import(
     Twist
 )
 
+
 HOME = [-1.571, -1.18997, -2.0167, -1.3992, 1.5407, 0.0]
-##PUSHING TASKS
-# END1 = [-1.571, -1.5710356871234339, -2.2512028853045862, -0.6734879652606409, 1.5406923294067383, 1.1984225238848012e-05]
-# END2 = [-1.571, -2.1604259649859827, -1.5543845335589808, -0.8909743467914026, 1.5406923294067383, 0.00022770027862861753]
-
-# END1 = [-0.800208870564596, -1.789145294819967, -2.005460564290182, -0.8623107115374964, 1.4747997522354126, 0.769659161567688]
-# END2 = [-1.0631392637835901, -2.302997414265768, -1.2114885489093226, -1.119192902241842, 1.4926565885543823, 0.5063522458076477]
-
-## OPENING TASKS
-# END1 = [0.4409816563129425, -1.3135612646686, -1.551652733479635, -1.920682732258932, 1.4868240356445312, 2.016606092453003]
-# END2 = [0.3971351385116577, -1.2446196714984339, -1.8191035429583948, -1.7183736006366175, 1.4836620092391968, 1.9727555513381958]
-# END3 = [0.5832183361053467, -0.9510038534747522, -1.9657209555255335, -1.880350414906637, 1.4980816841125488, 2.1588282585144043]
-
-# END1 = [-1.041595760975973, -1.8703201452838343, -1.036715332661764, -1.7285526434527796, 1.4909679889678955, 0.5278684496879578]
-# END2 = [-1.0415361563311976, -1.8442123571978968, -1.2443326155291956, -1.5469968954669397, 1.4909679889678955, 0.5278684496879578]
-# END3 = [-1.241943661366598, -1.7700746695147913, -1.3399184385882776, -1.511160675679342, 1.5078425407409668, 0.327643483877182]
-
-## POURING TASKS
-# END1 = [-1.3948305288897913, -1.7874186674701136, -1.1428821722613733, -1.6826689879046839, 1.522489070892334, 0.1752678006887436]
-# END2 = [-1.4037821928607386, -1.9028056303607386, -1.0214160124408167, -2.451665703450338, 1.6441372632980347, 0.1319171041250229]
-
-##SCOOPING TASKS
-# END1 =  [-1.5709403196917933, -1.5436261335956019, -1.6257012526141565, -2.217304054890768, 1.5397224426269531, -0.0646899382220667]
-# END2 =  [-1.5708087126361292, -1.9425666967975062, -1.7290032545672815, -1.7152803579913538, 1.539758324623108, -0.06461745897401983]
-# END3 =  [-1.5708087126361292, -1.5888941923724573, -2.0001443068133753, -1.797647778187887, 1.5397343635559082, -0.06461745897401983]
-
-# END1 = [-1.1448381582843226, -1.8685577551471155, -1.266087834035055, -2.1436808745013636, 1.7771531343460083, 0.3563782870769501]
-# END2 = [-1.1448500792132776, -1.968987766896383, -1.629570786152975, -1.679755989705221, 1.7771531343460083, 0.35633033514022827]
-# END3 = [-1.0765388647662562, -1.7488940397845667, -1.8186481634723108, -1.697524372731344, 1.81356680393219, 0.41587546467781067]
-
-END1 =  [-1.5709522406207483, -1.16223651567568, -2.1478288809405726, -0.8249462286578577, 1.5407402515411377, 1.1984225238848012e-05]
-END2 = [-1.1979368368731897, -1.6720030943499964, -2.222870651875631, -0.28124839464296514, 1.3416996002197266, 0.3186849057674408]
-END3 = [-1.2630122343646448, -1.7763188521014612, -1.9321110884295862, -0.455576244984762, 1.375403642654419, 0.2618163824081421]
-
-##CUTTING TASKS
-# END1 = [-1.5969041029559534, -1.2059386412249964, -1.9943731466876429, -1.468011204396383, 1.6726858615875244, -1.4354031721698206]
-# END2 = [-1.8035920302020472, -1.8345988432513636, -1.3963878790484827, -1.4591873327838343, 1.6795711517333984, -1.643170181904928]
-# END3 = [-1.8035438696490687, -2.0096381346331995, -1.7424657980548304, -0.9381220976458948, 1.679523229598999, -1.6430981794940394]
-
-# END1 = [-1.5556967894183558, -1.2045124212848108, -1.9810469786273401, -1.5529559294330042, 1.462847352027893, 1.5334954261779785]
-# END2 =  [-1.0417879263507288, -1.8450630346881312, -1.3635037581073206, -1.5804713408099573, 1.490153431892395, 2.057386636734009]
-# END3 = [-1.041811768208639, -2.007815663014547, -1.7200797239886683, -1.0612648169146937, 1.4901773929595947, 2.057410478591919]
-
 STEP_SIZE_L = 0.15
 STEP_SIZE_A = 0.2 * np.pi / 4
 STEP_TIME = 0.01
@@ -222,10 +182,7 @@ class TrajectoryClient(object):
         gamma = np.arctan2(R[1,0]/np.cos(beta),R[0,0]/np.cos(beta))
         xyz_ang = [alpha, beta, gamma]
         xyz = xyz = np.asarray(xyz_lin[-1]).tolist() + np.asarray(xyz_ang).tolist()
-        # print(xyz)
-        # print(r.as_euler('xyz'))
-
-        return xyz#self.kdl_kin.forward(self.joint_states)
+        return xyz
 
     def pose2joint(self, pose):
         return self.kdl_kin.inverse(pose, self.joint_states)
@@ -237,10 +194,10 @@ class TrajectoryClient(object):
 
     def send(self, xdot):
         qdot = xdot#self.xdot2qdot(xdot)
-        # self.qdots.append(qdot)
-        # qdot_mean = np.mean(self.qdots, axis=0).tolist()[0]
+        self.qdots.append(qdot)
+        qdot_mean = np.mean(self.qdots, axis=0).tolist()
         cmd_vel = Float64MultiArray()
-        cmd_vel.data = qdot
+        cmd_vel.data = qdot_mean
         self.vel_pub.publish(cmd_vel)
 
     def send_joint(self, pos, time):
@@ -258,10 +215,22 @@ class TrajectoryClient(object):
         Robotiq.goto(self.robotiq_client, pos=pos, speed=speed, force=force, block=True)
         return self.robotiq_client.get_result()
 
+def get_human_action(goal, state):
+    noiselevel = 0.07
+    action = (goal - state) * .5 + np.random.normal(0, noiselevel, len(goal))
+    action = np.clip(action, -0.3, 0.3)
+    return action
+
 
 def main():
-    demo_num = sys.argv[1]
-    rospy.init_node("teleop")
+    demo_num = "1"
+    task = sys.argv[1]
+    model_name = sys.argv[2]
+    cae_model = 'models/' + 'cae_' + str(model_name)
+    class_model = 'models/' + 'class_' + str(model_name)
+    model = Model(class_model, cae_model)
+    goals = tasks[task]
+    rospy.init_node("data_collector")
 
     mover = TrajectoryClient()
     joystick = JoystickControl()
@@ -270,20 +239,23 @@ def main():
     rate = rospy.Rate(1000)
 
     print("[*] Initialized, Moving Home")
-    mover.switch_controller(mode='position')
-    mover.send_joint(HOME, 5.0)
-    mover.client.wait_for_result()
+    if np.linalg.norm(np.array(HOME) - np.array(mover.joint_states)) > 0.01:
+        mover.switch_controller(mode='position')
+        mover.send_joint(HOME, 5.0)
+        mover.client.wait_for_result()
     mover.switch_controller(mode='velocity')
     print("[*] Ready for joystick inputs")
 
     record = False
     flag1 = flag2 = True
-    demonstration = []
+    data = []
     steptime  = 0.4
-    action = np.zeros(6)
-    # start_q = recorder.joint_states
-    start_q = mover.joint2pose()
-    filename = "demos/" + demo_num + ".pkl"
+    qdot_h = np.zeros(6)
+    assist = False
+    assist_start = 2.0
+    start_q = mover.joint_states
+    start_pos = mover.joint2pose()
+    filename = "runs/" + model_name + "_" + task + "_" + demo_num + ".pkl"
 
     while not rospy.is_shutdown():
 
@@ -292,11 +264,17 @@ def main():
         # print(np.asarray(s).tolist() + np.asarray(start_q).tolist())
         t_curr = time.time() - start_time
         axes, start, mode, stop = joystick.getInput()
-        if stop or len(demonstration)>=60:
+
+        if stop or len(data)>=60:
+            demonstration = {}
+            demonstration["model"] = model_name
+            demonstration["task"] = task
+            demonstration["demo_num"] = demo_num
+            demonstration["data"] = data
+            print(data[0])
             pickle.dump(demonstration, open(filename, "wb"))
-            print(demonstration)
             print("[*] Done!")
-            print("[*] I recorded this many datapoints: ", len(demonstration))
+            print("[*] I recorded this many datapoints: ", len(data))
             mover.switch_controller(mode='position')
             mover.send_joint(s_joint, 1.0)
             return True
@@ -304,31 +282,58 @@ def main():
         if start and not record:
             record = True
             start_time = time.time()
+            assist_time = time.time()
             print('[*] Recording the demonstration...')
 
         curr_time = time.time()
-        if record and curr_time - start_time >= steptime:
-            # print(s)
-            demonstration.append(np.asarray(start_q).tolist() + np.asarray(s).tolist())
-            print(len(demonstration))
-            start_time = curr_time
-      
-        # joystick.getAction(axes)
-        # action = np.array([-0.1,0.0,0.0,0.0,0.0,0.0])
-        # mover.send(action)
-        if np.linalg.norm(np.asarray(END1) - np.asarray(s_joint)) > 0.02 and flag1 and record:
-            action = (np.asarray(END1) - np.asarray(s_joint))*0.5
-            action = np.clip(action, -0.3, 0.3)
-        elif np.linalg.norm(np.asarray(END2) - np.asarray(s_joint)) > 0.02 and flag2 and record:
-            action = (np.asarray(END2) - np.asarray(s_joint))*0.5
-            action = np.clip(action, -0.3, 0.3)
+        if record and curr_time - assist_time >= assist_start and not assist:
+            print("Assistance Started...")
+            assist = True
+
+        if np.linalg.norm(np.asarray(goals[0]) - np.asarray(s_joint)) > 0.02 and flag1 and record:
+            qdot_h = get_human_action(np.array(goals[0]), np.array(s_joint))
+        elif np.linalg.norm(np.asarray(goals[1]) - np.asarray(s_joint)) > 0.02 and flag2 and record:
+            qdot_h = get_human_action(np.array(goals[1]), np.array(s_joint))
             flag1 = False
         elif record:
-            action = (np.asarray(END3) - np.asarray(s_joint))*0.5
-            action = np.clip(action, -0.3, 0.3)
-            flag2 = False
+            try:
+                qdot_h = (np.asarray(goals[2]) - np.asarray(s_joint))*0.5
+                flag2 = False
+            except:
+                pass
 
-        mover.send(action)
+        qdot_h = np.clip(qdot_h, -0.3, 0.3)
+
+        alpha = model.classify(start_pos + s)
+        alpha = np.clip(alpha, 0.0, 0.6)
+        # alpha = 0.5
+        z = model.encoder(start_pos + s)
+        
+        a_robot = model.decoder(z, s)
+        a_robot = mover.xdot2qdot(a_robot)
+        qdot_r = np.zeros(6)
+        qdot_r = a_robot
+        qdot_r = qdot_r.tolist()
+
+        if assist:
+            qdot = (alpha * 1.0 * np.asarray(qdot_r) + (1-alpha) * np.asarray(qdot_h))*2.0
+            qdot = np.clip(qdot, -0.3, 0.3)
+            qdot = qdot.tolist()
+            qdot = qdot[0]
+        else:
+            qdot = qdot_h
+            # qdot = qdot[0]
+
+        if record and curr_time - start_time >= steptime:
+            elapsed_time = curr_time - assist_time
+            qdot_h = qdot_h
+            qdot_r = qdot_r
+            data.append([elapsed_time] + [s] + [qdot_h.tolist()] + [qdot_r] + [float(alpha)] + [z])
+            # print(z)
+            start_time = curr_time
+            print("qdot_h:{} qdot_r:{} alpha:{}".format(np.linalg.norm(qdot_h), np.linalg.norm(qdot_r), float(alpha)))
+
+        mover.send(qdot)
         rate.sleep()
 
 if __name__ == "__main__":
