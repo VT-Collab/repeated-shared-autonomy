@@ -48,8 +48,10 @@ from geometry_msgs.msg import(
     Twist
 )
 
-HOME = [-1.571, -1.2609770933734339, -1.842959229146139, \
-        0.07699000835418701, 1.6361737251281738, 0.0]
+HOME = [[-1.571, -1.2609770933734339, -1.842959229146139, 0.07699000835418701, 1.6361737251281738, 0.0], \
+        [-1.071, -1.2609770933734339, -1.842959229146139, 0.07699000835418701, 1.6361737251281738, 0.0], \
+            [-0.571, -1.2609770933734339, -1.842959229146139, 0.07699000835418701, 1.6361737251281738, 0.0], \
+                [-0.0, -1.2609770933734339, -1.842959229146139, 0.07699000835418701, 1.6361737251281738, 0.0]]
 
 STEP_SIZE_L = 0.15
 STEP_SIZE_A = 0.2 * np.pi / 4
@@ -122,7 +124,16 @@ class TrajectoryClient(object):
         self.joint_states = None
         self.robot_urdf = URDF.from_parameter_server()
         self.kdl_kin = KDLKinematics(self.robot_urdf, self.base_link, self.end_link)
-        6361737251281738
+        # Gripper action and client
+        action_name = rospy.get_param('~action_name', 'command_robotiq_action')
+        self.robotiq_client = actionlib.SimpleActionClient(action_name, \
+                                CommandRobotiqGripperAction)
+        self.robotiq_client.wait_for_server()
+        # Initialize gripper
+        goal = CommandRobotiqGripperGoal()
+        goal.emergency_release = False
+        goal.stop = False
+        goal.position = 1.00
         goal.speed = 0.1
         goal.force = 5.0
         # Sends the goal to the gripper.
@@ -200,7 +211,8 @@ def main():
 
     print("[*] Initialized, Moving Home")
     mover.switch_controller(mode='position')
-    mover.send_joint(HOME, 4.0)
+    for idx in range (4):
+        mover.send_joint(HOME[idx], 4.0)
     mover.client.wait_for_result()
     mover.switch_controller(mode='velocity')
     print("[*] Ready for joystick inputs")
