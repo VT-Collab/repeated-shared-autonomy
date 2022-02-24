@@ -56,51 +56,51 @@ tasks = {}
 END1 = [-1.571, -1.5710356871234339, -2.2512028853045862, -0.6734879652606409, 1.5406923294067383, 1.1984225238848012e-05]
 END2 = [-1.571, -2.1604259649859827, -1.5543845335589808, -0.8909743467914026, 1.5406923294067383, 0.00022770027862861753]
 
-tasks["pushing1"] = [END1, END2]
+tasks["push1"] = [END1, END2]
 
 END1 = [-0.800208870564596, -1.789145294819967, -2.005460564290182, -0.8623107115374964, 1.4747997522354126, 0.769659161567688]
 END2 = [-1.0631392637835901, -2.302997414265768, -1.2114885489093226, -1.119192902241842, 1.4926565885543823, 0.5063522458076477]
 
-tasks["pushing2"] = [END1, END2]
+tasks["push2"] = [END1, END2]
 
 ## OPENING TASKS
 END1 = [0.4409816563129425, -1.3135612646686, -1.551652733479635, -1.920682732258932, 1.4868240356445312, 2.016606092453003]
 END2 = [0.3971351385116577, -1.2446196714984339, -1.8191035429583948, -1.7183736006366175, 1.4836620092391968, 1.9727555513381958]
 END3 = [0.5832183361053467, -0.9510038534747522, -1.9657209555255335, -1.880350414906637, 1.4980816841125488, 2.1588282585144043]
 
-tasks["opening1"] = [END1, END2, END3]
+tasks["open1"] = [END1, END2, END3]
 
 END1 = [-1.041595760975973, -1.8703201452838343, -1.036715332661764, -1.7285526434527796, 1.4909679889678955, 0.5278684496879578]
 END2 = [-1.0415361563311976, -1.8442123571978968, -1.2443326155291956, -1.5469968954669397, 1.4909679889678955, 0.5278684496879578]
 END3 = [-1.241943661366598, -1.7700746695147913, -1.3399184385882776, -1.511160675679342, 1.5078425407409668, 0.327643483877182]
 
-tasks["opening2"] = [END1, END2, END3]
+tasks["open2"] = [END1, END2, END3]
 
 ##SCOOPING TASKS
 END1 = [-1.1448381582843226, -1.8685577551471155, -1.266087834035055, -2.1436808745013636, 1.7771531343460083, 0.3563782870769501]
 END2 = [-1.1448500792132776, -1.968987766896383, -1.629570786152975, -1.679755989705221, 1.7771531343460083, 0.35633033514022827]
 END3 = [-1.0765388647662562, -1.7488940397845667, -1.8186481634723108, -1.697524372731344, 1.81356680393219, 0.41587546467781067]
 
-tasks["scooping1"] = [END1, END2, END3]
+tasks["scoop1"] = [END1, END2, END3]
 
 END1 =  [-1.5709522406207483, -1.16223651567568, -2.1478288809405726, -0.8249462286578577, 1.5407402515411377, 1.1984225238848012e-05]
 END2 = [-1.1979368368731897, -1.6720030943499964, -2.222870651875631, -0.28124839464296514, 1.3416996002197266, 0.3186849057674408]
 END3 = [-1.2630122343646448, -1.7763188521014612, -1.9321110884295862,  -0.455576244984762, 1.375403642654419, 0.2618163824081421]
 
-tasks["scooping2"] = [END1, END2, END3]
+tasks["scoop2"] = [END1, END2, END3]
 
 ##CUTTING TASKS
 END1 = [-1.5969041029559534, -1.2059386412249964, -1.9943731466876429, -1.468011204396383, 1.6726858615875244, -1.4354031721698206]
 END2 = [-1.8035920302020472, -1.8345988432513636, -1.3963878790484827, -1.4591873327838343, 1.6795711517333984, -1.643170181904928]
 END3 = [-1.8035438696490687, -2.0096381346331995, -1.7424657980548304, -0.9381220976458948, 1.679523229598999, -1.6430981794940394]
 
-tasks["cutting1"] = [END1, END2, END3]
+tasks["cut1"] = [END1, END2, END3]
 
 END1 = [-1.5556967894183558, -1.2045124212848108, -1.9810469786273401, -1.5529559294330042, 1.462847352027893, 1.5334954261779785]
 END2 =  [-1.0417879263507288, -1.8450630346881312, -1.3635037581073206, -1.5804713408099573, 1.490153431892395, 2.057386636734009]
 END3 = [-1.041811768208639, -2.007815663014547, -1.7200797239886683, -1.0612648169146937, 1.4901773929595947, 2.057410478591919]
 
-tasks["cutting2"] = [END1, END2, END3]
+tasks["cut2"] = [END1, END2, END3]
 
 STEP_SIZE_L = 0.15
 STEP_SIZE_A = 0.2 * np.pi / 4
@@ -315,8 +315,8 @@ class RecordClient(object):
         return self.robotiq_client.get_result()
 
 
-def main():
-    demo_num = sys.argv[1]
+def main(task):
+    # demo_num = sys.argv[1]
     rospy.init_node("teleop")
 
     mover = TrajectoryClient()
@@ -340,8 +340,9 @@ def main():
     action = np.array([0.0,0.0,0.0,0.0,0.0,0.0])
     # start_q = recorder.joint_states
     start_q = mover.joint2pose()
-    filename = "demos/" + demo_num + ".pkl"
-
+    filename = "demos/" + task + ".pkl"
+    goal_idx = 0
+    goals = tasks[task]
     while not rospy.is_shutdown():
 
         s_joint = recorder.joint_states
@@ -349,8 +350,9 @@ def main():
         # print(np.asarray(s).tolist() + np.asarray(start_q).tolist())
         t_curr = time.time() - start_time
         axes, start, mode, stop = joystick.getInput()
+        start = True
         if stop or len(demonstration)>=60:
-            # pickle.dump(demonstration, open(filename, "wb"))
+            pickle.dump(demonstration, open(filename, "wb"))
             print(demonstration)
             print("[*] Done!")
             print("[*] I recorded this many datapoints: ", len(demonstration))
@@ -363,36 +365,44 @@ def main():
             start_time = time.time()
             print('[*] Recording the demonstration...')
 
+                # compute which position the robot needs to go to
+        if np.linalg.norm(np.asarray(goals[goal_idx]) - np.asarray(s_joint)) < 0.02:
+            if goal_idx < len(goals)-1:
+                goal_idx += 1
+            else:
+                done = True
+        if record:
+            action = (np.asarray(goals[goal_idx]) - np.asarray(s_joint))*0.5
+            action = np.clip(action, -0.3, 0.3)
+
+        # if np.linalg.norm(np.asarray(END1) - np.asarray(s_joint)) > 0.02 and flag1 and record:
+        #     action = (np.asarray(END1) - np.asarray(s_joint))*0.5
+        #     action = np.clip(action, -0.3, 0.3)
+        # elif np.linalg.norm(np.asarray(END2) - np.asarray(s_joint)) > 0.02 and flag2 and record:
+        #     action = (np.asarray(END2) - np.asarray(s_joint))*0.5
+        #     action = np.clip(action, -0.3, 0.3)
+        #     flag1 = False
+        # elif record:
+        #     try:
+        #         action = (np.asarray(END3) - np.asarray(s_joint))*0.5
+        #         action = np.clip(action, -0.3, 0.3)
+        #         flag2 = False
+        #     except:
+        #         pass
         curr_time = time.time()
         if record and curr_time - start_time >= steptime:
             # print(s)
-            demonstration.append(np.asarray(start_q).tolist() + np.asarray(s).tolist())
+            demonstration.append([np.asarray(start_q).tolist() + np.asarray(s).tolist(), action.tolist()])
             print(len(demonstration))
             start_time = curr_time
-      
-        # joystick.getAction(axes)
-        # action = np.array([-0.1,0.0,0.0,0.0,0.0,0.0])
-        # mover.send(action)
-        if np.linalg.norm(np.asarray(END1) - np.asarray(s_joint)) > 0.02 and flag1 and record:
-            action = (np.asarray(END1) - np.asarray(s_joint))*0.5
-            action = np.clip(action, -0.3, 0.3)
-        elif np.linalg.norm(np.asarray(END2) - np.asarray(s_joint)) > 0.02 and flag2 and record:
-            action = (np.asarray(END2) - np.asarray(s_joint))*0.5
-            action = np.clip(action, -0.3, 0.3)
-            flag1 = False
-        elif record:
-            try:
-                action = (np.asarray(END3) - np.asarray(s_joint))*0.5
-                action = np.clip(action, -0.3, 0.3)
-                flag2 = False
-            except:
-                pass
 
         mover.send(action)
         rate.sleep()
 
 if __name__ == "__main__":
-    try:
-        main()
-    except rospy.ROSInterruptException:
-        pass
+    taskset = ['push1', 'push2', 'cut1', 'cut2', 'scoop1', 'scoop2',  'open1', 'open2']
+    for task in taskset:
+        try:
+            main(task)
+        except rospy.ROSInterruptException:
+            pass

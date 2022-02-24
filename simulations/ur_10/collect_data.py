@@ -192,8 +192,7 @@ class TrajectoryClient(object):
         J_inv = np.linalg.pinv(J)
         return J_inv.dot(xdot)
 
-    def send(self, xdot):
-        qdot = xdot#self.xdot2qdot(xdot)
+    def send(self, qdot):
         self.qdots.append(qdot)
         qdot_mean = np.mean(self.qdots, axis=0).tolist()
         cmd_vel = Float64MultiArray()
@@ -221,11 +220,13 @@ def get_human_action(goal, state):
     action = np.clip(action, -0.3, 0.3)
     return action
 
+def compute_reward(goal, state):
+    return -np.linalg.norm(goal-state)
 
-def main():
+def main(task, model_name):
     demo_num = "1"
-    task = sys.argv[1]
-    model_name = sys.argv[2]
+    # task = sys.argv[1]
+    # model_name = sys.argv[2]
     cae_model = 'models/' + 'cae_' + str(model_name)
     class_model = 'models/' + 'class_' + str(model_name)
     model = Model(class_model, cae_model)
@@ -234,7 +235,8 @@ def main():
 
     mover = TrajectoryClient()
     joystick = JoystickControl()
-
+    reward = 0
+    cum_reward = 0
     start_time = time.time()
     rate = rospy.Rate(1000)
 
@@ -256,7 +258,8 @@ def main():
     start_q = mover.joint_states
     start_pos = mover.joint2pose()
     filename = "runs/" + model_name + "_" + task + "_" + demo_num + ".pkl"
-
+    goal_idx = 0
+    done = False
     while not rospy.is_shutdown():
 
         s_joint = mover.joint_states
@@ -264,20 +267,23 @@ def main():
         # print(np.asarray(s).tolist() + np.asarray(start_q).tolist())
         t_curr = time.time() - start_time
         axes, start, mode, stop = joystick.getInput()
-
-        if stop or len(data)>=60:
+        start = True
+        if stop or done or len(data)>=60:
             demonstration = {}
             demonstration["model"] = model_name
             demonstration["task"] = task
             demonstration["demo_num"] = demo_num
             demonstration["data"] = data
-            print(data[0])
+            if not data:
+                print("[*] No data recorded")
+            else:
+                print(data[0])
             pickle.dump(demonstration, open(filename, "wb"))
             print("[*] Done!")
             print("[*] I recorded this many datapoints: ", len(data))
             mover.switch_controller(mode='position')
             mover.send_joint(s_joint, 1.0)
-            return True
+            return cum_reward
 
         if start and not record:
             record = True
@@ -290,17 +296,15 @@ def main():
             print("Assistance Started...")
             assist = True
 
-        if np.linalg.norm(np.asarray(goals[0]) - np.asarray(s_joint)) > 0.02 and flag1 and record:
-            qdot_h = get_human_action(np.array(goals[0]), np.array(s_joint))
-        elif np.linalg.norm(np.asarray(goals[1]) - np.asarray(s_joint)) > 0.02 and flag2 and record:
-            qdot_h = get_human_action(np.array(goals[1]), np.array(s_joint))
-            flag1 = False
-        elif record:
-            try:
-                qdot_h = (np.asarray(goals[2]) - np.asarray(s_joint))*0.5
-                flag2 = False
-            except:
-                pass
+        # compute which position the robot needs to go to
+        if np.linalg.norm(np.asarray(goals[goal_idx]) - np.asarray(s_joint)) < 0.02:
+            if goal_idx < len(goals)-1:
+                goal_idx += 1
+            else:
+                done = True
+        if record:
+            qdot_h = get_human_action(np.array(goals[goal_idx]), np.array(s_joint))
+            reward = compute_reward(np.array(goals[goal_idx]), np.array(s_joint))
 
         qdot_h = np.clip(qdot_h, -0.3, 0.3)
 
@@ -326,18 +330,25 @@ def main():
 
         if record and curr_time - start_time >= steptime:
             elapsed_time = curr_time - assist_time
-            qdot_h = qdot_h
-            qdot_r = qdot_r
-            data.append([elapsed_time] + [s] + [qdot_h.tolist()] + [qdot_r] + [float(alpha)] + [z])
-            # print(z)
+            data.append([elapsed_time] + [s_joint] + [qdot_h.tolist()] + [qdot_r] + [float(alpha)] + [z] + [reward])
             start_time = curr_time
-            print("qdot_h:{} qdot_r:{} alpha:{}".format(np.linalg.norm(qdot_h), np.linalg.norm(qdot_r), float(alpha)))
-
+            print("qdot_h:{:2.4f} qdot_r:{:2.4f} alpha:{:2.4f} reward:{:2.4f}"\
+                .format(np.linalg.norm(qdot_h), np.linalg.norm(qdot_r), float(alpha), float(reward)))
+        cum_reward += reward
         mover.send(qdot)
         rate.sleep()
 
 if __name__ == "__main__":
-    try:
-        main()
-    except rospy.ROSInterruptException:
-        pass
+    # models = ['push1', 'push1_open1', 'push1_open1', 'push1_open1_scoop1', 'push1_open1_scoop1', 'push12_open1_scoop1_cut1',\
+    #             'push12_open12_scoop1_cut1', 'push12_open12_scoop12_cut1', 'push12_open12_scoop12_cut12']
+    models = ['push1_open1_scoop1']
+    rewards = []
+    for i in range(len(models)):
+        task = "cut1"
+        try:
+            r = main(task, models[i])
+            print(r)
+            rewards.append(r)
+        except rospy.ROSInterruptException:
+            pass
+    print(rewards)
