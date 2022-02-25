@@ -400,7 +400,7 @@ def main(task):
         rate.sleep()
 
 if __name__ == "__main__":
-    taskset = ['push1', 'push2', 'cut1', 'cut2', 'scoop1', 'scoop2',  'open1', 'open2']
+    taskset = ['push1']#, 'push2', 'cut1', 'cut2', 'scoop1', 'scoop2',  'open1', 'open2']
     for task in taskset:
         try:
             main(task)

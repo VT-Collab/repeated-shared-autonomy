@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-
 import rospy
 import actionlib
 import sys
@@ -11,9 +10,8 @@ from urdf_parser_py.urdf import URDF
 from pykdl_utils.kdl_kinematics import KDLKinematics
 import copy
 from collections import deque
-from sim_play_ur10 import Model
+
 from std_msgs.msg import Float64MultiArray, String
-from gen_data import tasks
 
 from robotiq_2f_gripper_msgs.msg import (
     CommandRobotiqGripperFeedback, 
@@ -50,8 +48,6 @@ from geometry_msgs.msg import(
     Twist
 )
 
-
-HOME = [-1.571, -1.18997, -2.0167, -1.3992, 1.5407, 0.0]
 STEP_SIZE_L = 0.15
 STEP_SIZE_A = 0.2 * np.pi / 4
 STEP_TIME = 0.01
@@ -100,6 +96,7 @@ class JoystickControl(object):
         else:
             self.action = (STEP_SIZE_L * -z[1], STEP_SIZE_L * -z[0], STEP_SIZE_L * -z[2], 0, 0, 0)
 
+
 class TrajectoryClient(object):
 
     def __init__(self):
@@ -110,7 +107,7 @@ class TrajectoryClient(object):
         self.client.wait_for_server()
         # Velocity commands publishSTEP_SIZE_Ler
         self.vel_pub = rospy.Publisher('/joint_group_vel_controller/command',\
-                 Float64MultiArray, queue_size=10)
+                 Float64MultiArray, queue_size=100)
         # Subscribers to update joint state
         self.joint_sub = rospy.Subscriber('/joint_states', JointState, self.joint_states_cb)
         # service call to switch controllers
@@ -215,140 +212,10 @@ class TrajectoryClient(object):
         return self.robotiq_client.get_result()
 
 def get_human_action(goal, state):
-    noiselevel = 0.07
+    noiselevel = 0.01
     action = (goal - state) * .5 + np.random.normal(0, noiselevel, len(goal))
     action = np.clip(action, -0.3, 0.3)
     return action
 
 def compute_reward(goal, state):
     return -np.linalg.norm(goal-state)
-
-def main(task, model_name):
-    demo_num = "1"
-    # task = sys.argv[1]
-    # model_name = sys.argv[2]
-    cae_model = 'models/' + 'cae_' + str(model_name)
-    class_model = 'models/' + 'class_' + str(model_name)
-    model = Model(class_model, cae_model)
-    goals = tasks[task]
-    rospy.init_node("data_collector")
-
-    mover = TrajectoryClient()
-    joystick = JoystickControl()
-    reward = 0
-    cum_reward = 0
-    start_time = time.time()
-    rate = rospy.Rate(1000)
-
-    print("[*] Initialized, Moving Home")
-    if np.linalg.norm(np.array(HOME) - np.array(mover.joint_states)) > 0.01:
-        mover.switch_controller(mode='position')
-        mover.send_joint(HOME, 5.0)
-        mover.client.wait_for_result()
-    mover.switch_controller(mode='velocity')
-    print("[*] Ready for joystick inputs")
-
-    record = False
-    flag1 = flag2 = True
-    data = []
-    steptime  = 0.4
-    qdot_h = np.zeros(6)
-    assist = False
-    assist_start = 2.0
-    start_q = mover.joint_states
-    start_pos = mover.joint2pose()
-    filename = "runs/" + model_name + "_" + task + "_" + demo_num + ".pkl"
-    goal_idx = 0
-    done = False
-    while not rospy.is_shutdown():
-
-        s_joint = mover.joint_states
-        s = mover.joint2pose()
-        # print(np.asarray(s).tolist() + np.asarray(start_q).tolist())
-        t_curr = time.time() - start_time
-        axes, start, mode, stop = joystick.getInput()
-        start = True
-        if stop or done or len(data)>=60:
-            demonstration = {}
-            demonstration["model"] = model_name
-            demonstration["task"] = task
-            demonstration["demo_num"] = demo_num
-            demonstration["data"] = data
-            if not data:
-                print("[*] No data recorded")
-            else:
-                print(data[0])
-            pickle.dump(demonstration, open(filename, "wb"))
-            print("[*] Done!")
-            print("[*] I recorded this many datapoints: ", len(data))
-            mover.switch_controller(mode='position')
-            mover.send_joint(s_joint, 1.0)
-            return cum_reward
-
-        if start and not record:
-            record = True
-            start_time = time.time()
-            assist_time = time.time()
-            print('[*] Recording the demonstration...')
-
-        curr_time = time.time()
-        if record and curr_time - assist_time >= assist_start and not assist:
-            print("Assistance Started...")
-            assist = True
-
-        # compute which position the robot needs to go to
-        if np.linalg.norm(np.asarray(goals[goal_idx]) - np.asarray(s_joint)) < 0.02:
-            if goal_idx < len(goals)-1:
-                goal_idx += 1
-            else:
-                done = True
-        if record:
-            qdot_h = get_human_action(np.array(goals[goal_idx]), np.array(s_joint))
-            reward = compute_reward(np.array(goals[goal_idx]), np.array(s_joint))
-
-        qdot_h = np.clip(qdot_h, -0.3, 0.3)
-
-        alpha = model.classify(start_pos + s)
-        alpha = np.clip(alpha, 0.0, 0.6)
-        # alpha = 0.5
-        z = model.encoder(start_pos + s)
-        
-        a_robot = model.decoder(z, s)
-        a_robot = mover.xdot2qdot(a_robot)
-        qdot_r = np.zeros(6)
-        qdot_r = a_robot
-        qdot_r = qdot_r.tolist()
-
-        if assist:
-            qdot = (alpha * 1.0 * np.asarray(qdot_r) + (1-alpha) * np.asarray(qdot_h))*2.0
-            qdot = np.clip(qdot, -0.3, 0.3)
-            qdot = qdot.tolist()
-            qdot = qdot[0]
-        else:
-            qdot = qdot_h
-            # qdot = qdot[0]
-
-        if record and curr_time - start_time >= steptime:
-            elapsed_time = curr_time - assist_time
-            data.append([elapsed_time] + [s_joint] + [qdot_h.tolist()] + [qdot_r] + [float(alpha)] + [z] + [reward])
-            start_time = curr_time
-            print("qdot_h:{:2.4f} qdot_r:{:2.4f} alpha:{:2.4f} reward:{:2.4f}"\
-                .format(np.linalg.norm(qdot_h), np.linalg.norm(qdot_r), float(alpha), float(reward)))
-        cum_reward += reward
-        mover.send(qdot)
-        rate.sleep()
-
-if __name__ == "__main__":
-    # models = ['push1', 'push1_open1', 'push1_open1', 'push1_open1_scoop1', 'push1_open1_scoop1', 'push12_open1_scoop1_cut1',\
-    #             'push12_open12_scoop1_cut1', 'push12_open12_scoop12_cut1', 'push12_open12_scoop12_cut12']
-    models = ['push1_open1_scoop1']
-    rewards = []
-    for i in range(len(models)):
-        task = "cut1"
-        try:
-            r = main(task, models[i])
-            print(r)
-            rewards.append(r)
-        except rospy.ROSInterruptException:
-            pass
-    print(rewards)

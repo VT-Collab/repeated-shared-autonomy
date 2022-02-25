@@ -43,26 +43,17 @@ class Net(nn.Module):
 
         self.loss_func = nn.CrossEntropyLoss()
 
-        # Encoder
-        self.classifier = nn.Sequential(
-            nn.Linear(12, 15),
+        #RNN
+        self.gru = nn.GRU(
+            input_size = 18,
+            hidden_size = latent_dim,
+            num_layers = 1,
+            batch_first = True
+            )
+        self.fcn = nn.Sequential(
+            nn.Linear(latent_dim, 15),
             nn.Tanh(),
-            # nn.Dropout(0.1),
-            nn.Linear(15, 20),
-            nn.Tanh(),
-            # nn.Dropout(0.1),
-            nn.Linear(20, 7),
-            nn.Tanh(),
-            nn.Linear(7, 2)
-            # nn.Linear(14, 7),
-            # nn.Tanh(),
-            # # nn.Dropout(0.1),
-            # # nn.Linear(14, 20),
-            # # nn.Tanh(),
-            # # nn.Dropout(0.1),
-            # # nn.Linear(10, 10),
-            # # nn.Tanh(),
-            # nn.Linear(7, 2)
+            nn.Linear(15, 2)
         )
 
     def classify(self, x):
@@ -71,7 +62,8 @@ class Net(nn.Module):
     def forward(self, x):
         c = x[0]
         s = x[1]
-        y_output = self.classify(c)
+        h, _ = self.gru(c)
+        y_output = self.fcn(h)
         y_true = x[2]
         loss = self.loss(y_output, y_true)
         return loss
@@ -100,7 +92,7 @@ def deform(xi, start, length, tau):
 # train cAE
 def train_classifier(tasks):
 
-    tasks = sys.argv[1]
+    # tasks = sys.argv[1]
     # tasks = int(tasks)
 
     dataset = []
@@ -116,16 +108,19 @@ def train_classifier(tasks):
 
     savename = 'data/' + 'class_' + str(tasks) + '.pkl'
     for filename in os.listdir(folder):
-        traj = pickle.load(open(folder + "/" + filename, "rb"))
+        if not filename in tasks:
+            continue
+        demo = pickle.load(open(folder + "/" + filename, "rb"))
+        traj = [item[0] for item in demo]
+        action = [item[1] for item in demo]
         n_states = len(traj)
         # home_state = traj[0]
+        z = [1.0]
         for idx in range(n_states):
             home_state = traj[idx][:6]
-            position = np.asarray(traj[idx])[6:]
-            nextposition = np.asarray(traj[idx + lookahead])[6:]
-            action = nextposition - (position + np.random.normal(0, noiselevel, 6))
+            position = traj[idx][6:]
             traj_type = 0
-            dataset.append((home_state + position.tolist(), position.tolist(), z, action.tolist(), traj_type))
+            dataset.append((home_state + position + action[idx], position, z, action[idx], traj_type))
             true_cnt += 1
 
         snippets = np.array_split(traj, 1)
@@ -136,21 +131,21 @@ def train_classifier(tasks):
                 # print(deform_len)
                 start = 0
                 for i in range(deformed_samples):
+                    # print(snip[:,6:9])
                     snip_deformed = deform(snip[:,6:], 0, deform_len, tau)
-                    # print(np.linalg.norm(snip[:, 7:] - snip_deformed))
                     snip[:,6:] = snip_deformed
                     # fake data
                     n_states = len(snip)
                     for idx in range(start, deform_len):
                         home_state = snip[idx][:6].tolist()
-                        position = np.asarray(snip[idx])[6:] 
+                        position = snip[idx][6:] 
                         # nextposition = np.asarray(snip[idx + lookahead])[7:]
                         # for jdx in range(noisesamples):
-                        position = position #+ np.random.normal(0, noiselevel, 7)
-                        noise_position = (position + np.random.normal(0, noiselevel, 6))
-                        action = nextposition - noise_position
+                        # position = position #+ np.random.normal(0, noiselevel, 7)
+                        # noise_position = (position + np.random.normal(0, noiselevel, 6))
+                        # action = nextposition - noise_position
                         traj_type = 1
-                        dataset.append((home_state + noise_position.tolist(), noise_position.tolist(), z, action.tolist(), traj_type))
+                        dataset.append((home_state + position.tolist() + action[idx], position.tolist(), z, action[idx], traj_type))
                         false_cnt += 1
                     # print(dataset[-1])
     pickle.dump(dataset, open(savename, "wb"))
@@ -194,7 +189,7 @@ def train_classifier(tasks):
         torch.save(model.state_dict(), savename)
 
 def main():
-    num_tasks = "pushing"
+    num_tasks = ["push1.pkl", "open1.pkl"]
     train_classifier(num_tasks)
 
 if __name__ == "__main__":

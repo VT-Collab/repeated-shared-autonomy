@@ -390,8 +390,7 @@ def main():
         # # print(qdot_h)
         # qdot_h = qdot_h.tolist()
 
-
-        alpha = model.classify(start_q + s)
+        alpha = model.classify(start_q + s + qdot_h[0])
         alpha = np.clip(alpha, 0.0, 0.6)
         # alpha = 0.5
         z = model.encoder(start_q + s)
@@ -412,6 +411,7 @@ def main():
             start_time = curr_time
 
         if assist:
+            alpha = 0
             qdot = (alpha * 1.0 * np.asarray(qdot_r) + (1-alpha) * np.asarray(qdot_h))*2.0
             qdot = np.clip(qdot, -0.3, 0.3)
             qdot = qdot.tolist()
@@ -430,7 +430,7 @@ def main():
             qdot_h = qdot_h
             qdot_r = qdot_r
             data.append([elapsed_time] + [s] + [qdot_h] + [qdot_r] + [float(alpha)])
-            print(z)
+            # print(z)
             start_time = curr_time
             print(float(alpha))
             # print("qdot = {}, qdot_r = {}" .format(qdot,qdot_r))
