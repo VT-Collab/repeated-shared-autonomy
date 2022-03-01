@@ -212,7 +212,7 @@ class TrajectoryClient(object):
         return self.robotiq_client.get_result()
 
 def get_human_action(goal, state):
-    noiselevel = 0.01
+    noiselevel = 0.05
     action = (goal - state) * .5 + np.random.normal(0, noiselevel, len(goal))
     action = np.clip(action, -0.3, 0.3)
     return action

@@ -42,6 +42,7 @@ class Net(nn.Module):
         super(Net, self).__init__()
 
         self.loss_func = nn.CrossEntropyLoss()
+        latent_dim = 5
 
         #RNN
         self.gru = nn.GRU(
@@ -51,9 +52,9 @@ class Net(nn.Module):
             batch_first = True
             )
         self.fcn = nn.Sequential(
-            nn.Linear(latent_dim, 15),
+            nn.Linear(latent_dim, 5),
             nn.Tanh(),
-            nn.Linear(15, 2)
+            nn.Linear(5, 2)
         )
 
     def classify(self, x):
@@ -81,8 +82,8 @@ def deform(xi, start, length, tau):
         A[idx+2,idx] = 1
     R = np.linalg.inv(np.dot(A.T, A))
     U = np.zeros(length)
-    gamma = np.zeros((length, 6))
-    for idx in range(6):
+    gamma = np.zeros((length, len(tau)))
+    for idx in range(len(tau)):
         U[0] = tau[idx]
         gamma[:,idx] = np.dot(R, U)
     end = min([start+length, xi1.shape[0]-1])
@@ -92,16 +93,8 @@ def deform(xi, start, length, tau):
 # train cAE
 def train_classifier(tasks):
 
-    # tasks = sys.argv[1]
-    # tasks = int(tasks)
-
     dataset = []
     folder = 'demos'
-    lookahead = 0
-    noiselevel = 0.05
-    deformed_trajs = []
-    # noisesamples = 3
-    z = [1.0]
 
     true_cnt = 0
     false_cnt = 0
@@ -114,13 +107,11 @@ def train_classifier(tasks):
         traj = [item[0] for item in demo]
         action = [item[1] for item in demo]
         n_states = len(traj)
-        # home_state = traj[0]
-        z = [1.0]
         for idx in range(n_states):
             home_state = traj[idx][:6]
             position = traj[idx][6:]
             traj_type = 0
-            dataset.append((home_state + position + action[idx], position, z, action[idx], traj_type))
+            dataset.append((home_state + position + action[idx], traj_type))
             true_cnt += 1
 
         snippets = np.array_split(traj, 1)
@@ -128,26 +119,18 @@ def train_classifier(tasks):
         for snip in snippets:
                 tau = np.random.uniform([-0.07]*6, [0.07]*6)
                 deform_len = len(snip)
-                # print(deform_len)
                 start = 0
                 for i in range(deformed_samples):
-                    # print(snip[:,6:9])
                     snip_deformed = deform(snip[:,6:], 0, deform_len, tau)
                     snip[:,6:] = snip_deformed
-                    # fake data
                     n_states = len(snip)
                     for idx in range(start, deform_len):
                         home_state = snip[idx][:6].tolist()
                         position = snip[idx][6:] 
-                        # nextposition = np.asarray(snip[idx + lookahead])[7:]
-                        # for jdx in range(noisesamples):
-                        # position = position #+ np.random.normal(0, noiselevel, 7)
-                        # noise_position = (position + np.random.normal(0, noiselevel, 6))
-                        # action = nextposition - noise_position
                         traj_type = 1
-                        dataset.append((home_state + position.tolist() + action[idx], position.tolist(), z, action[idx], traj_type))
+                        dataset.append((home_state + position.tolist() + action[idx], traj_type))
                         false_cnt += 1
-                    # print(dataset[-1])
+
     pickle.dump(dataset, open(savename, "wb"))
     print(dataset[-1])
     print("[*] I have this many subtrajectories: ", len(dataset))
@@ -166,7 +149,7 @@ def train_classifier(tasks):
 
     raw_data = pickle.load(open(dataname, "rb"))
     raw_data = random.sample(raw_data, len(raw_data))
-    # raw_data = raw_data.tolist()
+
     inputs = [element[:4] for element in raw_data]
     targets = [element[4] for element in raw_data]
     # print(inputs[0])
@@ -189,8 +172,12 @@ def train_classifier(tasks):
         torch.save(model.state_dict(), savename)
 
 def main():
-    num_tasks = ["push1.pkl", "open1.pkl"]
-    train_classifier(num_tasks)
+    keys = ["push1"]
+    tasklist = []
+    for key in keys:
+        for i in range(1, demo_num+1):
+            tasklist.append(key + "_" + str(i) + ".pkl")
+    train_classifier(tasklist)
 
 if __name__ == "__main__":
     main()
