@@ -10,7 +10,10 @@ from urdf_parser_py.urdf import URDF
 from pykdl_utils.kdl_kinematics import KDLKinematics
 import copy
 from collections import deque
-
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from torch.utils.data import Dataset, DataLoader
 from std_msgs.msg import Float64MultiArray, String
 
 from robotiq_2f_gripper_msgs.msg import (
@@ -47,6 +50,9 @@ from geometry_msgs.msg import(
     TwistStamped,
     Twist
 )
+
+
+from train_classifier import Net
 
 STEP_SIZE_L = 0.15
 STEP_SIZE_A = 0.2 * np.pi / 4
@@ -210,6 +216,35 @@ class TrajectoryClient(object):
     def actuate_gripper(self, pos, speed, force):
         Robotiq.goto(self.robotiq_client, pos=pos, speed=speed, force=force, block=True)
         return self.robotiq_client.get_result()
+
+class Model(object):
+
+    def __init__(self, classifier_name):#, cae_name):
+        self.class_net = Net()
+        # self.cae_net = CAE()
+        
+        model_dict = torch.load(classifier_name, map_location='cpu')
+        self.class_net.load_state_dict(model_dict)
+        
+        # model_dict = torch.load(cae_name, map_location='cpu')
+        # self.cae_net.load_state_dict(model_dict)
+
+        self.class_net.eval
+        # self.cae_net.eval
+
+    def classify(self, c):
+        label = self.class_net.classify(c)
+        return label.data.numpy()
+
+    # def encoder(self, c):
+    #     z_mean_tensor = self.cae_net.encoder(torch.FloatTensor(c))
+    #     return z_mean_tensor.tolist()
+
+    # def decoder(self, z, s):
+    #     z_tensor = torch.FloatTensor(z + s)
+    #     a_predicted = self.cae_net.decoder(z_tensor)
+    #     return a_predicted.data.numpy()
+
 
 def get_human_action(goal, state):
     noiselevel = 0.05
