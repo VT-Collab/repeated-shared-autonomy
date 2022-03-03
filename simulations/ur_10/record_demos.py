@@ -63,7 +63,7 @@ def generate_trajectory(task, demo_num):
     mover.switch_controller(mode='velocity')
 
     demo = []
-    step_time = 0.4
+    step_time = 0.1
     qdot = np.zeros(6)
     start_pos = mover.joint2pose()
     goals = TASKSET[task]
@@ -77,7 +77,7 @@ def generate_trajectory(task, demo_num):
 
         axes, start, mode, stop = joystick.getInput()
 
-        if stop or len(demo) >= 60:
+        if stop or len(demo) >= 250:
             print("[*] Datapoints in trajectory: ", len(demo))
             mover.switch_controller(mode='position')
             mover.send_joint(q, 1.0)

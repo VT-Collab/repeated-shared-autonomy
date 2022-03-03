@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader
 import pickle
 import random
@@ -15,7 +16,6 @@ device = "cpu"
 if device == "cuda":
     torch.cuda.empty_cache()
 
-# collect dataset
 class MotionData(Dataset):
 
     def __init__(self, x, y):
@@ -28,17 +28,18 @@ class MotionData(Dataset):
     def __getitem__(self, idx):
         traj = torch.Tensor(self.data[idx])
         label = torch.tensor(self.target[idx])
+        label = label.type(torch.LongTensor)
         return (traj, label)
 
 
-# conditional autoencoder
+# GRU based classifier
 class Net(nn.Module):
 
     def __init__(self):
         super(Net, self).__init__()
 
-        self.loss_func = nn.MSELoss()
-        latent_dim = 5
+        self.loss_func = nn.CrossEntropyLoss()
+        latent_dim = 10
 
         #RNN
         self.gru = nn.GRU(
@@ -50,25 +51,29 @@ class Net(nn.Module):
         self.fcn = nn.Sequential(
             nn.Linear(latent_dim, 5),
             nn.Tanh(),
-            nn.Linear(5, 1)
-            # nn.LogSoftmax()
+            nn.Linear(5, 2)
         )
 
     def classify(self, x):
         o, h = self.gru(x)
-        # print("o:", o.shape)
-        # print("h:", h.shape)
         y = self.fcn(h)
-        # print("y:", y.shape)
+        y = F.softmax(y.squeeze(), dim=0)
         return y
 
     def forward(self, x):
         c = x[0]
         y_true = x[1]
-        # print(c.shape)
         o, h = self.gru(c)
         y_output = self.fcn(o)
-        y_true = y_true.unsqueeze(2)
+        # print(y_output)
+        shape = y_output.shape
+        # y_output = torch.transpose(y_output, shape[2], shape[1])
+        # y_output = y_output.view(shape[0], shape[2], shape[1])
+        y_output = y_output.view(-1, 2)
+        # print(y_output)
+        # sys.exit()
+        y_true = y_true.view(-1)
+        # y_true = y_true.unsqueeze(2)
         loss = self.loss(y_output, y_true)
         return loss
 
@@ -93,7 +98,6 @@ def deform(xi, start, length, tau):
     xi1[start:end,:] += gamma[0:end-start,:]
     return xi1
 
-# train cAE
 def train_classifier(tasklist, max_demos):
 
     tasks = []
@@ -120,12 +124,15 @@ def train_classifier(tasklist, max_demos):
         # Deformations
         traj = np.array([item[0] for item in demo])
         actions = np.array([item[1] for item in demo])
-        tau = np.random.uniform([-0.07]*6, [0.07]*6)
-        traj[:,6:] = deform(traj[:,6:], 0, len(traj), tau)
-        data = np.column_stack((traj, actions)).tolist()
-        label = np.ones(len(traj)).tolist()
-        # label = 1.
-        dataset.append([data, label])
+        tau = np.random.uniform([-0.04]*6, [0.04]*6)
+        deform_samples = 20
+        for _ in range(deform_samples):
+            start = np.random.choice(np.arange(10, 180))
+            traj[:,6:] = deform(traj[:,6:], 0, len(traj), tau)
+            data = np.column_stack((traj, actions)).tolist()
+            label = np.ones(len(traj)).tolist()
+            # label = 1.
+            dataset.append([data, label])
 
     pickle.dump(dataset, open(savename, "wb"))
     print("[*] I have this many trajectories: ", len(dataset))
@@ -134,10 +141,10 @@ def train_classifier(tasklist, max_demos):
     dataname = 'data/' + 'class_' + "_".join(tasklist) + '.pkl'
     savename = 'models/' + 'class_' + "_".join(tasklist)
 
-    EPOCH = 500
+    EPOCH = 1000
     # BATCH_SIZE_TRAIN = 10000
     LR = 0.01
-    LR_STEP_SIZE = 200
+    LR_STEP_SIZE = 800
     LR_GAMMA = 0.1
 
 
@@ -147,7 +154,7 @@ def train_classifier(tasklist, max_demos):
     targets = [element[1] for element in raw_data]
     # print(targets)
     train_data = MotionData(inputs, targets)
-    BATCH_SIZE_TRAIN = 3
+    BATCH_SIZE_TRAIN = 5
     train_set = DataLoader(dataset=train_data, batch_size=BATCH_SIZE_TRAIN, shuffle=True)
 
     optimizer = optim.Adam(model.parameters(), lr=LR)
@@ -164,9 +171,11 @@ def train_classifier(tasklist, max_demos):
         torch.save(model.state_dict(), savename)
 
 def main():
+    required_tasks = [["push1"], ["push2"], ["cut1"], ["cut2"], ["scoop1"], ["scoop2"],\
+                      ["open1"], ["open2"]]
     max_demos = 5
-    tasklist = ["push1"]
-    train_classifier(tasklist, max_demos)
+    for tasklist in required_tasks:
+        train_classifier(tasklist, max_demos)
 
 if __name__ == "__main__":
     main()

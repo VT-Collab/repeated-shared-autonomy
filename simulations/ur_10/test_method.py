@@ -52,7 +52,7 @@ from utils import TrajectoryClient, JoystickControl, Model, get_human_action, co
 from tasks import HOME, TASKSET 
 
 
-def main():
+def run_test(model_name, test_task):
     rospy.init_node("test_method")
 
     mover = TrajectoryClient()
@@ -61,41 +61,38 @@ def main():
     start_time = time.time()
     rate = rospy.Rate(1000)
 
-    print("[*] Initialized, Moving Home")
     if np.linalg.norm(np.array(HOME) - np.array(mover.joint_states)) > 0.01:
         mover.switch_controller(mode='position')
         mover.send_joint(HOME, 5.0)
         mover.client.wait_for_result()
     mover.switch_controller(mode='velocity')
-    print("[*] Ready for joystick inputs")
 
-
-    model_name = sys.argv[1]
     # cae_model = 'models/' + 'cae_' + str(model_name)
     class_model = 'models/' + 'class_' + str(model_name)
     model = Model(class_model)#, cae_model)
 
-    step_time  = 0.4
+    step_time  = 0.1
     scaling_trans = 0.1
     scaling_rot = 0.2
-    start_q = mover.joint2pose()
-    goals = TASKSET["push1"]
+    start_q = mover.joint_states
+    start_pos = mover.joint2pose()
+    goals = TASKSET[test_task]
     goal_idx = 0
     traj = []
-
+    alphas = []
     while not rospy.is_shutdown():
 
         q = np.asarray(mover.joint_states).tolist()
         s = mover.joint2pose()
         axes, start, mode, stop = joystick.getInput()
-        if stop:
+        if stop or len(traj) >= 250:
             # pickle.dump(demonstration, open(filename, "wb"))
             # # print(demonstration)
             # print("[*] Done!")
             # print("[*] I recorded this many datapoints: ", len(demonstration))
             mover.switch_controller(mode='position')
             mover.send_joint(q, 1.0)
-            return True
+            return float(np.mean(alphas))
 
         # xdot_h = np.zeros(6)
         # if mode:
@@ -112,11 +109,11 @@ def main():
                  and goal_idx < len(goals)-1:
             goal_idx += 1
 
-        qdot = get_human_action(curr_goal, q)
+        qdot_h = get_human_action(curr_goal, q).tolist()
 
         curr_time = time.time()
         if curr_time - start_time >= step_time:
-            traj.append(start_q + s + qdot_h[0])
+            traj.append(start_pos + s + qdot_h)
             start_time = curr_time
 
         if traj:
@@ -124,13 +121,34 @@ def main():
             t = torch.Tensor(traj).unsqueeze(0)
             # print(t)
             alpha = model.classify(t)
-            print(alpha)
-            
+            # print(alpha[0])
+            alphas.append(alpha[0])
         qdot = qdot_h
-        qdot = qdot[0]
+        # qdot = qdot[0]
         
         mover.send(qdot)
         rate.sleep()
+
+def main():
+    # model_name = [sys.argv[1]]
+    # test_task = [sys.argv[2]]
+    model_names = ["push1", "push2", "cut1", "cut2", "scoop1", "scoop2",\
+                      "open1", "open2"]
+    test_tasks = ["push1", "push2", "cut1", "cut2", "scoop1", "scoop2",\
+                      "open1", "open2"]                      
+    results = {}
+    for model_name in model_names:
+        alpha_per_task = []
+        # print("Current model:", model_name)
+        for test_task in test_tasks:
+            alpha_mean = run_test(model_name, test_task)
+            alpha_per_task.append(alpha_mean)
+            print("model: {} task: {} confidence: {}".format(model_name, test_task, alpha_mean))
+        results[model_name] = alpha_per_task
+    print(results)
+    results["description"] = "computed mean confidence of model trained on one task vs all tasks"
+    results["trials"] = 1
+    pickle.dump(results, open("model_confidences.pkl", "wb"))
 
 if __name__ == "__main__":
     try:
