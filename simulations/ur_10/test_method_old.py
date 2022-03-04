@@ -9,8 +9,9 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader
+import torch.nn.functional as F
 from std_msgs.msg import Float64MultiArray, String
-
+from train_classifier_old import Net
 # ROS required imports
 from robotiq_2f_gripper_msgs.msg import (
     CommandRobotiqGripperFeedback, 
