@@ -61,6 +61,9 @@ def run_test(model_name, test_task):
     start_time = time.time()
     rate = rospy.Rate(1000)
 
+    while not mover.joint_states:
+        print("Waiting for joint states")
+
     if np.linalg.norm(np.array(HOME) - np.array(mover.joint_states)) > 0.01:
         mover.switch_controller(mode='position')
         mover.send_joint(HOME, 5.0)
@@ -115,14 +118,14 @@ def run_test(model_name, test_task):
         if curr_time - start_time >= step_time:
             traj.append(start_pos + s + qdot_h)
             start_time = curr_time
-
-        if traj:
-            # print(traj)
-            t = torch.Tensor(traj).unsqueeze(0)
-            # print(t)
-            alpha = model.classify(t)
-            # print(alpha[0])
-            alphas.append(alpha[0])
+            if traj:
+                # print(traj)
+                t = torch.Tensor(traj).unsqueeze(0)
+                # print(t)
+                alpha = model.classify(t)
+                # print(alpha[0])
+                alphas.append(alpha[0])
+                
         qdot = qdot_h
         # qdot = qdot[0]
         

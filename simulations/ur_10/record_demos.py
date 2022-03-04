@@ -101,9 +101,9 @@ def generate_trajectory(task, demo_num):
         rate.sleep()
 
 def main():
-    max_demos = 5
+    max_demos = 15
     for task in TASKSET:
-        for demo_num in range(1,max_demos+1):
+        for demo_num in range(11,max_demos+1):
             savename = "demos/" + task + "_" + str(demo_num) + ".pkl"
             demo = generate_trajectory(task, demo_num)
             print(demo)

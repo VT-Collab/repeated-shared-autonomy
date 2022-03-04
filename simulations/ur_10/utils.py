@@ -245,6 +245,22 @@ class Model(object):
     #     a_predicted = self.cae_net.decoder(z_tensor)
     #     return a_predicted.data.numpy()
 
+def deform(xi, start, length, tau):
+    xi1 = copy.deepcopy(np.asarray(xi))
+    A = np.zeros((length+2, length))
+    for idx in range(length):
+        A[idx, idx] = 1
+        A[idx+1,idx] = -2
+        A[idx+2,idx] = 1
+    R = np.linalg.inv(np.dot(A.T, A))
+    U = np.zeros(length)
+    gamma = np.zeros((length, 6))
+    for idx in range(6):
+        U[0] = tau[idx]
+        gamma[:,idx] = np.dot(R, U)
+    end = min([start+length, xi1.shape[0]-1])
+    xi1[start:end,:] += gamma[0:end-start,:]
+    return xi1
 
 def get_human_action(goal, state):
     noiselevel = 0.05

@@ -9,6 +9,7 @@ from sklearn.utils import shuffle
 import sys
 import os
 import copy 
+from utils import deform
 # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 device = "cpu"
 # Clear GPU memory from previous runs
@@ -46,3 +47,4 @@ print(target.shape)
 # h, o = gru(input)
 # y = fcn(h)
 # print(y)
+results = {}
