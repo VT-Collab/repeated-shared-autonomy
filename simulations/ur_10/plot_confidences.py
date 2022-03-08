@@ -8,12 +8,12 @@ def main():
     tasknames = ["push1", "push2", "cut1", "cut2", "scoop1", "scoop2",\
                       "open1", "open2"]
     """steptime = 0.4 data"""
-    data_dict = pickle.load(open("confidences_demos_15.pkl", "rb"))
+    data_dict = pickle.load(open("confidences_old_demos_5_deforms_20.pkl", "rb"))
     data_04 = []
     for key in tasknames:
         data_04.append(data_dict[key])
     """steptime = 0.1 data"""
-    data_dict = pickle.load(open("confidences_large_nw.pkl", "rb"))
+    data_dict = pickle.load(open("confidences_old_demos_10_deforms_20.pkl", "rb"))
     data_01 = []
     for key in tasknames:
         data_01.append(data_dict[key])
@@ -24,8 +24,8 @@ def main():
 
     axs[0].imshow(data_04)
     axs[1].imshow(data_01)
-    axs[0].set_title("15 Human demos, latent dim = 10")
-    axs[1].set_title("15 Human demos, latent dim = 15")
+    axs[0].set_title("5 Human demos, deforms = 20")
+    axs[1].set_title("10 Human demos, deforms = 20")
     for ax in axs:
         ax.set_xticks(np.arange(len(tasknames)))
         ax.set_xticklabels(tasknames)

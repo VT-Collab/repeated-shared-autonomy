@@ -70,8 +70,9 @@ class Model(object):
 
     def classify(self, c):
         labels = self.class_net.classifier(torch.FloatTensor(c))
-        confidence = F.softmax(labels, dim=0)
+        confidence = F.softmax(labels, dim=1)
         return confidence.data[0].numpy()
+        # return labels.detach().numpy()
 
     # def encoder(self, c):
     #     z_mean_tensor = self.cae_net.encoder(torch.FloatTensor(c))
@@ -152,7 +153,7 @@ def run_test(model_name, test_task):
             # t = torch.Tensor(traj).unsqueeze(0)
             # print(t)
             alpha = model.classify([start_pos + s + qdot_h])
-            # print(alpha[0])
+            # print(alpha)
             alphas.append(alpha[0])
         qdot = qdot_h
         # qdot = qdot[0]
@@ -163,8 +164,18 @@ def run_test(model_name, test_task):
 def main():
     # model_name = [sys.argv[1]]
     # test_task = [sys.argv[2]]
-    model_names = ["push1", "push2", "cut1", "cut2", "scoop1", "scoop2",\
-                      "open1", "open2"]
+    # model_names = ["push1", "push2", "cut1", "cut2", "scoop1", "scoop2",\
+    #                   "open1", "open2"]
+    model_names = [["push1"], ["push1", "push2"], ["push1", "push2", "cut1"],\
+                      ["push1", "push2", "cut1", "cut2"], ["push1", "push2", "cut1", "cut2", "scoop1"],\
+                      ["push1", "push2", "cut1", "cut2", "scoop1", "scoop2"],\
+                      ["push1", "push2", "cut1", "cut2", "scoop1", "scoop2", "open1"],\
+                      ["push1", "push2", "cut1", "cut2", "scoop1", "scoop2", "open1", "open2"],
+                      ["open2"], ["open2", "open1"], ["open2", "open1", "scoop2"],\
+                      ["open2", "open1", "scoop2", "scoop1"], ["open2", "open1", "scoop2", "scoop1", "cut2"],\
+                      ["open2", "open1", "scoop2", "scoop1", "cut2", "cut1"],\
+                      ["open2", "open1", "scoop2", "scoop1", "cut2", "cut1", "push2"],
+                      ["open2", "open1", "scoop2", "scoop1", "cut2", "cut1", "push2", "push1"]]
     test_tasks = ["push1", "push2", "cut1", "cut2", "scoop1", "scoop2",\
                       "open1", "open2"]                      
     results = {}

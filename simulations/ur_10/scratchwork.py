@@ -22,6 +22,7 @@ data1 = pickle.load(open("demos/push1_1.pkl","rb"))
 
 # plotting deformations
 def deform(xi, start, length, tau):
+    length += 250
     # length += np.random.choice(np.arange(50, 250))
     xi1 = copy.deepcopy(np.asarray(xi))
     A = np.zeros((length+2, length))
@@ -31,21 +32,22 @@ def deform(xi, start, length, tau):
         A[idx+2,idx] = 1
     R = np.linalg.inv(np.dot(A.T, A))
     U = np.zeros(length)
-    gamma = np.zeros((length, 3))
-    for idx in range(3):
+    gamma = np.zeros((length, len(tau)))
+    for idx in range(len(tau)):
         U[0] = tau[idx]
         gamma[:,idx] = np.dot(R, U)
     end = min([start+length, xi1.shape[0]-1])
-    xi1[start:end,:] += gamma[0:end-start,:]
+    xi1[start:end+1,:] += gamma[0:end-start+1,:]
     return xi1
 traj = np.array([item[0] for item in data1])
     
 fig = plt.figure()
 ax = fig.gca(projection='3d')    
-ax.plot(traj[:,6], traj[:,7], traj[:,8], label='parametric curve')
-tau = np.random.uniform([-0.04]*6, [0.04]*6)
-traj[:,6:9] = deform(traj[:,6:9], 0, len(traj), tau) 
-ax.plot(traj[:,6], traj[:,7], traj[:,8])#, label='parametric curve')
+ax.plot(traj[:,6], traj[:,7], traj[:,8], 'r', linewidth=1.0)# label='parametric curve')
+tau = np.random.uniform([-0.0005]*6, [0.0005]*6)
+traj_def = deform(traj[:,6:], np.random.choice(np.arange(20,170)), len(traj), tau) 
+print(len(traj_def))
+ax.plot(traj_def[:,0], traj_def[:,1], traj_def[:,2], 'b', linewidth=2.0)#, label='parametric curve')
 plt.show()
 
 

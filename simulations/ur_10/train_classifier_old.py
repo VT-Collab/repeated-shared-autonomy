@@ -41,7 +41,7 @@ class Net(nn.Module):
     def __init__(self):
         super(Net, self).__init__()
 
-        self.loss_func = nn.CrossEntropyLoss()
+        self.loss_func = nn.CrossEntropyLoss(weight=torch.tensor([20., 1]))
 
         # Encoder
         self.classifier = nn.Sequential(
@@ -83,6 +83,7 @@ class Net(nn.Module):
 
 
 def deform(xi, start, length, tau):
+    length += np.random.choice(np.arange(50, 250))
     xi1 = copy.deepcopy(np.asarray(xi))
     A = np.zeros((length+2, length))
     for idx in range(length):
@@ -96,7 +97,7 @@ def deform(xi, start, length, tau):
         U[0] = tau[idx]
         gamma[:,idx] = np.dot(R, U)
     end = min([start+length, xi1.shape[0]-1])
-    xi1[start:end,:] += gamma[0:end-start,:]
+    xi1[start:end+1,:] += gamma[0:end-start+1,:]
     return xi1
 
 # train cAE
@@ -105,8 +106,6 @@ def train_classifier(tasklist, max_demos):
     for task in tasklist:
         for i in range(1, max_demos+1):
             tasks.append(task + "_" + str(i) + ".pkl")
-    print(tasks)
-    # sys.exit()
     # tasks = sys.argv[1]
     # tasks = int(tasks)
 
@@ -129,7 +128,6 @@ def train_classifier(tasklist, max_demos):
         traj = [item[0] for item in demo]
         action = [item[1] for item in demo]
         n_states = len(traj)
-        # home_state = traj[0]
         z = [1.0]
         for idx in range(n_states):
             home_state = traj[idx][:6]
@@ -139,30 +137,24 @@ def train_classifier(tasklist, max_demos):
             true_cnt += 1
 
         snippets = np.array_split(traj, 1)
-        deformed_samples = 2
+        deformed_samples = 20
         for snip in snippets:
-                tau = np.random.uniform([-0.07]*6, [0.07]*6)
+                tau = np.random.uniform([-0.001]*6, [0.001]*6)
                 deform_len = len(snip)
                 # print(deform_len)
-                start = 0
                 for i in range(deformed_samples):
                     # print(snip[:,6:9])
-                    snip_deformed = deform(snip[:,6:], 0, deform_len, tau)
+                    start = np.random.choice(np.arange(20,170))
+                    snip_deformed = deform(snip[:,6:], start, deform_len, tau)
                     snip[:,6:] = snip_deformed
                     # fake data
                     n_states = len(snip)
                     for idx in range(start, deform_len):
                         home_state = snip[idx][:6].tolist()
                         position = snip[idx][6:] 
-                        # nextposition = np.asarray(snip[idx + lookahead])[7:]
-                        # for jdx in range(noisesamples):
-                        # position = position #+ np.random.normal(0, noiselevel, 7)
-                        # noise_position = (position + np.random.normal(0, noiselevel, 6))
-                        # action = nextposition - noise_position
                         traj_type = 1
                         dataset.append((home_state + position.tolist() + action[idx], position.tolist(), z, action[idx], traj_type))
                         false_cnt += 1
-                    # print(dataset[-1])
     pickle.dump(dataset, open(savename, "wb"))
     print(dataset[-1])
     print("[*] I have this many subtrajectories: ", len(dataset))
@@ -204,9 +196,17 @@ def train_classifier(tasklist, max_demos):
         torch.save(model.state_dict(), savename)
 
 def main():
-    required_tasks = [["push1"], ["push2"], ["cut1"], ["cut2"], ["scoop1"], ["scoop2"],\
-                      ["open1"], ["open2"]]
-    max_demos = 15
+    required_tasks = [["push1"], ["push1", "push2"], ["push1", "push2", "cut1"],\
+                      ["push1", "push2", "cut1", "cut2"], ["push1", "push2", "cut1", "cut2", "scoop1"],\
+                      ["push1", "push2", "cut1", "cut2", "scoop1", "scoop2"],\
+                      ["push1", "push2", "cut1", "cut2", "scoop1", "scoop2", "open1"],\
+                      ["push1", "push2", "cut1", "cut2", "scoop1", "scoop2", "open1", "open2"],
+                      ["open2"], ["open2", "open1"], ["open2", "open1", "scoop2"],\
+                      ["open2", "open1", "scoop2", "scoop1"], ["open2", "open1", "scoop2", "scoop1", "cut2"],\
+                      ["open2", "open1", "scoop2", "scoop1", "cut2", "cut1"],\
+                      ["open2", "open1", "scoop2", "scoop1", "cut2", "cut1", "push2"],
+                      ["open2", "open1", "scoop2", "scoop1", "cut2", "cut1", "push2", "push1"]]
+    max_demos = 10
     for tasklist in required_tasks:
         print("[*] Training for task: ", tasklist)
         train_classifier(tasklist, max_demos)
