@@ -38,8 +38,8 @@ class Net(nn.Module):
     def __init__(self):
         super(Net, self).__init__()
 
-        self.loss_func = nn.CrossEntropyLoss()
-        latent_dim = 15
+        self.loss_func = nn.CrossEntropyLoss(weight = torch.Tensor([20., 1.]))
+        latent_dim = 10
 
         #RNN
         self.gru = nn.GRU(
@@ -49,9 +49,7 @@ class Net(nn.Module):
             batch_first = True
             )
         self.fcn = nn.Sequential(
-            nn.Linear(latent_dim, 10),
-            nn.Tanh(),
-            nn.Linear(10, 5),
+            nn.Linear(latent_dim, 5),
             nn.Tanh(),
             nn.Linear(5, 2)
         )
@@ -83,6 +81,7 @@ class Net(nn.Module):
         return self.loss_func(output, target)
 
 def deform(xi, start, length, tau):
+    length += np.random.choice(np.arange(50, length))
     xi1 = copy.deepcopy(np.asarray(xi))
     A = np.zeros((length+2, length))
     for idx in range(length):
@@ -96,7 +95,7 @@ def deform(xi, start, length, tau):
         U[0] = tau[idx]
         gamma[:,idx] = np.dot(R, U)
     end = min([start+length, xi1.shape[0]-1])
-    xi1[start:end,:] += gamma[0:end-start,:]
+    xi1[start:end+1,:] += gamma[0:end-start+1,:]
     return xi1
 
 def train_classifier(tasklist, max_demos):
@@ -125,11 +124,11 @@ def train_classifier(tasklist, max_demos):
         # Deformations
         traj = np.array([item[0] for item in demo])
         actions = np.array([item[1] for item in demo])
-        tau = np.random.uniform([-0.04]*6, [0.04]*6)
-        deform_samples = 1
+        tau = np.random.uniform([-0.0004]*6, [0.0004]*6)
+        deform_samples = 20
         for _ in range(deform_samples):
-            start = np.random.choice(np.arange(10, 180))
-            traj[:,6:] = deform(traj[:,6:], 0, len(traj), tau)
+            start = np.random.choice(np.arange(20, 100))
+            traj[:,6:] = deform(traj[:,6:], start, len(traj), tau)
             data = np.column_stack((traj, actions)).tolist()
             label = np.ones(len(traj)).tolist()
             # label = 1.
@@ -155,7 +154,7 @@ def train_classifier(tasklist, max_demos):
     targets = [element[1] for element in raw_data]
     # print(targets)
     train_data = MotionData(inputs, targets)
-    BATCH_SIZE_TRAIN = 3
+    BATCH_SIZE_TRAIN = 5
     train_set = DataLoader(dataset=train_data, batch_size=BATCH_SIZE_TRAIN, shuffle=True)
 
     optimizer = optim.Adam(model.parameters(), lr=LR)

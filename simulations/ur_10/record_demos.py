@@ -77,7 +77,7 @@ def generate_trajectory(task, demo_num):
 
         axes, start, mode, stop = joystick.getInput()
 
-        if stop or len(demo) >= 250:
+        if stop or len(demo) >= 155:
             print("[*] Datapoints in trajectory: ", len(demo))
             mover.switch_controller(mode='position')
             mover.send_joint(q, 1.0)
@@ -85,28 +85,27 @@ def generate_trajectory(task, demo_num):
 
         # find current goal for human
         curr_goal = np.asarray(goals[goal_idx])
-        if np.linalg.norm(curr_goal - q) < 0.1\
-                 and goal_idx < len(goals)-1:
-            goal_idx += 1
+        if np.linalg.norm(curr_goal - q) < 0.1 and goal_idx < len(goals)-1:
+                goal_idx += 1
 
         qdot = get_human_action(curr_goal, q)
         reward = compute_reward(curr_goal, q)
 
         curr_time = time.time()
         if curr_time - start_time >= step_time:
-            demo.append([start_pos + curr_pos, qdot.tolist()])
+            demo.append([start_pos + curr_pos, qdot.tolist(), float(reward)])
             start_time = curr_time
 
         mover.send(qdot)
         rate.sleep()
 
 def main():
-    max_demos = 15
-    for task in TASKSET:
-        for demo_num in range(11,max_demos+1):
+    max_demos = 20
+    tasklist = ["push2"]
+    for task in tasklist:
+        for demo_num in range(1,max_demos+1):
             savename = "demos/" + task + "_" + str(demo_num) + ".pkl"
             demo = generate_trajectory(task, demo_num)
-            print(demo)
             pickle.dump(demo, open(savename, "wb"))
 if __name__ == "__main__":
         try:

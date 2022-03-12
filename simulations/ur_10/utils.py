@@ -13,6 +13,7 @@ from collections import deque
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader
 from std_msgs.msg import Float64MultiArray, String
 
@@ -52,7 +53,9 @@ from geometry_msgs.msg import(
 )
 
 
-from train_classifier import Net
+from train_classifier_old import Net
+from train_cae_old import CAE
+from tasks import HOME
 
 STEP_SIZE_L = 0.15
 STEP_SIZE_A = 0.2 * np.pi / 4
@@ -190,10 +193,36 @@ class TrajectoryClient(object):
     def pose2joint(self, pose):
         return self.kdl_kin.inverse(pose, self.joint_states)
 
+    def qdot2xdot(self, qdot):
+        J = self.kdl_kin.jacobian(self.joint_states)
+        return J.dot(qdot)
+
     def xdot2qdot(self, xdot):
         J = self.kdl_kin.jacobian(self.joint_states)
         J_inv = np.linalg.pinv(J)
         return J_inv.dot(xdot)
+
+    def compute_limits(self, qdot):
+        if isinstance(qdot[0], list):
+            xdot = self.qdot2xdot(qdot[0])
+        else:
+            xdot = self.qdot2xdot(qdot)
+        # print(xdot)
+        s_next = self.joint2pose() + xdot
+        if s_next[0,2] < 0.2:
+            xdot[0,2] = 0.2 - s_next[0,2]
+        if s_next[0,0] > 0.45 or s_next[0,0] < -0.9:
+            # print("edited x")
+            xdot[0,0] = 0
+        if s_next[0,1] < 0.23 or s_next[0,1] > 1.12:
+            # print("edited y")
+            xdot[0,1] = 0
+        qdot = self.xdot2qdot(xdot.transpose()).transpose()
+        if self.joint_states[2] > -0.7 and qdot[0, 2] > 0:
+            # print("edited qdot")
+            qdot[0, 2] = 0.
+        qdot = qdot.tolist()        
+        return qdot
 
     def send(self, qdot):
         self.qdots.append(qdot)
@@ -219,22 +248,54 @@ class TrajectoryClient(object):
 
 class Model(object):
 
-    def __init__(self, classifier_name):#, cae_name):
+    def __init__(self, classifier_name, cae_name):
         self.class_net = Net()
-        # self.cae_net = CAE()
+        self.cae_net = CAE()
         
         model_dict = torch.load(classifier_name, map_location='cpu')
         self.class_net.load_state_dict(model_dict)
         
-        # model_dict = torch.load(cae_name, map_location='cpu')
-        # self.cae_net.load_state_dict(model_dict)
+        model_dict = torch.load(cae_name, map_location='cpu')
+        self.cae_net.load_state_dict(model_dict)
 
         self.class_net.eval
-        # self.cae_net.eval
+        self.cae_net.eval
 
     def classify(self, c):
-        label = self.class_net.classify(c)
-        return label.data.numpy()
+        labels = self.class_net.classifier(torch.FloatTensor(c))
+        # print(labels)
+        confidence = F.softmax(labels, dim=0)
+        return confidence.data[0].numpy()
+        # return labels.detach().numpy()
+
+    def encoder(self, c):
+        z_mean_tensor = self.cae_net.encoder(torch.FloatTensor(c))
+        return z_mean_tensor.tolist()
+
+    def decoder(self, z, s):
+        z_tensor = torch.FloatTensor(z + s)
+        a_predicted = self.cae_net.decoder(z_tensor)
+        return a_predicted.data.numpy()
+
+# GRU model
+# class Model(object):
+
+#     def __init__(self, classifier_name):#, cae_name):
+#         self.class_net = Net()
+#         # self.cae_net = CAE()
+        
+#         model_dict = torch.load(classifier_name, map_location='cpu')
+#         self.class_net.load_state_dict(model_dict)
+        
+#         # model_dict = torch.load(cae_name, map_location='cpu')
+#         # self.cae_net.load_state_dict(model_dict)
+
+#         self.class_net.eval
+#         # self.cae_net.eval
+
+#     def classify(self, c):
+#         label = self.class_net.classify(c)
+#         return label.data.numpy()
 
     # def encoder(self, c):
     #     z_mean_tensor = self.cae_net.encoder(torch.FloatTensor(c))
@@ -245,26 +306,67 @@ class Model(object):
     #     a_predicted = self.cae_net.decoder(z_tensor)
     #     return a_predicted.data.numpy()
 
-def deform(xi, start, length, tau):
-    xi1 = copy.deepcopy(np.asarray(xi))
-    A = np.zeros((length+2, length))
-    for idx in range(length):
-        A[idx, idx] = 1
-        A[idx+1,idx] = -2
-        A[idx+2,idx] = 1
-    R = np.linalg.inv(np.dot(A.T, A))
-    U = np.zeros(length)
-    gamma = np.zeros((length, 6))
-    for idx in range(6):
-        U[0] = tau[idx]
-        gamma[:,idx] = np.dot(R, U)
-    end = min([start+length, xi1.shape[0]-1])
-    xi1[start:end,:] += gamma[0:end-start,:]
-    return xi1
+# def deform(xi, start, length, tau):
+#     xi1 = copy.deepcopy(np.asarray(xi))
+#     A = np.zeros((length+2, length))
+#     for idx in range(length):
+#         A[idx, idx] = 1
+#         A[idx+1,idx] = -2
+#         A[idx+2,idx] = 1
+#     R = np.linalg.inv(np.dot(A.T, A))
+#     U = np.zeros(length)
+#     gamma = np.zeros((length, 6))
+#     for idx in range(6):
+#         U[0] = tau[idx]
+#         gamma[:,idx] = np.dot(R, U)
+#     end = min([start+length, xi1.shape[0]-1])
+#     xi1[start:end,:] += gamma[0:end-start,:]
+#     return xi1
+
+def go2home():
+    mover = TrajectoryClient()
+    # Sometime going home fails because joint_states are None
+    while True:
+        try:
+            if np.linalg.norm(np.array(HOME) - np.array(mover.joint_states)) > 0.01:
+                if np.linalg.norm(np.array(HOME) - np.array(mover.joint_states)) < 1.5:
+                    time = 5.
+                else:
+                    time = 8.
+                mover.switch_controller(mode='position')
+                mover.send_joint(HOME, time)
+                mover.client.wait_for_result()
+            mover.switch_controller(mode='velocity')
+        except:
+            continue
+        break
+    return True    
+
+def compute_optimal_rewards():
+    optimal_rewards = {}
+    folder = "demos"
+    for filename in os.listdir(folder):
+        if not filename[-3:] == "pkl":
+            continue
+        task = filename.split("_")[0]
+
+        data = pickle.load(open(folder + "/" + filename, "rb"))
+        if data:
+            cum_reward = sum([item[2] for item in data])
+        else:
+            print("{} has no data".format(filename))
+        if task in optimal_rewards:
+            optimal_rewards[task].append(cum_reward)    
+        else:
+            optimal_rewards[task] = [cum_reward]
+
+    for task in optimal_rewards:
+        optimal_rewards[task] = float(np.mean(optimal_rewards[task]))
+    pickle.dump(optimal_rewards, open("optimal_rewards.pkl", "wb"))
 
 def get_human_action(goal, state):
     noiselevel = 0.05
-    action = (goal - state) * .5 + np.random.normal(0, noiselevel, len(goal))
+    action = (goal - state) * 0.5 + np.random.normal(0, noiselevel, len(goal))
     action = np.clip(action, -0.3, 0.3)
     return action
 

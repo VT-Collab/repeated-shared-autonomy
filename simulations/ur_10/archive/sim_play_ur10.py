@@ -343,7 +343,7 @@ def main():
     scaling_trans = 0.1
     scaling_rot = 0.2
     assist = False
-    assist_start = 5.0
+    assist_start = 155.0
     action = np.array([0.0,0.0,0.0,0.0,0.0,0.0])
     start_q = mover.joint2pose()
     # qdot = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
@@ -374,6 +374,7 @@ def main():
         xdot_h = np.zeros(6)
         if mode:
             xdot_h[3:] = scaling_trans * np.asarray(axes)
+            print(xdot_h)
         else:
             xdot_h[:3] = scaling_trans * np.asarray(axes)
             

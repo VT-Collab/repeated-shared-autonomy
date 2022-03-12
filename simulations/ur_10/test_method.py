@@ -61,8 +61,8 @@ def run_test(model_name, test_task):
     start_time = time.time()
     rate = rospy.Rate(1000)
 
-    while not mover.joint_states:
-        print("Waiting for joint states")
+    # while not mover.joint_states:
+    #     print("Waiting for joint states")
 
     if np.linalg.norm(np.array(HOME) - np.array(mover.joint_states)) > 0.01:
         mover.switch_controller(mode='position')
@@ -88,7 +88,7 @@ def run_test(model_name, test_task):
         q = np.asarray(mover.joint_states).tolist()
         s = mover.joint2pose()
         axes, start, mode, stop = joystick.getInput()
-        if stop or len(traj) >= 250:
+        if stop or len(traj) >= 155:
             # pickle.dump(demonstration, open(filename, "wb"))
             # # print(demonstration)
             # print("[*] Done!")
