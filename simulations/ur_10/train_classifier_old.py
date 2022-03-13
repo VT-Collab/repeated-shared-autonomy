@@ -214,8 +214,8 @@ def train_classifier(tasklist, max_demos):
                 network_inputs += traj.tolist()
                 network_labels += labels.tolist()
 
-                deformed_samples = 20
-                tau = np.random.uniform([-0.0004]*6, [-0.0004]*6)
+                deformed_samples = 5
+                tau = np.random.uniform([-0.00035]*6, [-0.00035]*6)
                 deform_len = len(traj)
                 for i in range(deformed_samples):
                     start = np.random.choice(np.arange(20, 100))

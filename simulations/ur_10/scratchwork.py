@@ -84,7 +84,7 @@ tasklist = [["push1"], ["push1", "push2"], ["push1", "push2", "cut1"],\
                   ["open2", "open1", "scoop2", "scoop1", "cut2", "cut1", "push2", "push1"]]
 
 
-folder = "runs/alpha_0.8"
+folder = "runs/alpha_0.2"
 mean_alphas = {}
 models = []
 for taskset in tasklist:
@@ -103,16 +103,18 @@ for taskset in tasklist:
             alphas[task].append(alpha)
         else:
             alphas[task] = [float(alpha)]
+    print(alphas)
     means = []
     for key in alphas:
         means.append(np.mean(alphas[key]))
     mean_alphas[model] = np.mean(means)
-sorted_alphas = [mean_alphas[model] for model in models]
-if len(sorted_alphas) <= 8:
-    print(sorted_alphas)
-else:
-    print(sorted_alphas[:8])
-    print(sorted_alphas[8:])
+
+# sorted_alphas = [mean_alphas[model] for model in models]
+# if len(sorted_alphas) <= 8:
+#     print(sorted_alphas)
+# else:
+#     print(sorted_alphas[:8])
+#     print(sorted_alphas[8:])
 
 
 # def main():
