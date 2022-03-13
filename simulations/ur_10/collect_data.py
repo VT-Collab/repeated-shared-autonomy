@@ -133,8 +133,8 @@ def main(model_name, max_runs):
 
                     if assist:
                         # alpha = .8
-                        # qdot = (alpha * 2.5 * np.asarray(qdot_r) + (1-alpha) * np.asarray(qdot_h))#*2.0
-                        qdot = (0.8 * 2.5 * np.asarray(qdot_r) + 0.2 * np.asarray(qdot_h))#*2.0
+                        qdot = (alpha * 2.5 * np.asarray(qdot_r) + (1-alpha) * np.asarray(qdot_h))#*2.0
+                        # qdot = (0.8 * 2.5 * np.asarray(qdot_r) + 0.2 * np.asarray(qdot_h))#*2.0
                         qdot = np.clip(qdot, -0.1, 0.1)
                         qdot = qdot.tolist()[0]
                     else:
