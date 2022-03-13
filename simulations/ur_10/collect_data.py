@@ -108,9 +108,6 @@ def main(model_name, max_runs):
                         mover.send_joint(q, 1.0)
                         return None
 
-                    if len(data) >= 155:
-                        done = True
-
                     curr_time = time.time()
                     if curr_time - assist_time >= assist_start and not assist:
                         assist = True
@@ -135,8 +132,9 @@ def main(model_name, max_runs):
                         qdot_r = qdot_r.tolist()
 
                     if assist:
-                        alpha = .8
-                        qdot = (alpha * 2.5 * np.asarray(qdot_r) + (1-alpha) * np.asarray(qdot_h))#*2.0
+                        # alpha = .8
+                        # qdot = (alpha * 2.5 * np.asarray(qdot_r) + (1-alpha) * np.asarray(qdot_h))#*2.0
+                        qdot = (0.8 * 2.5 * np.asarray(qdot_r) + 0.2 * np.asarray(qdot_h))#*2.0
                         qdot = np.clip(qdot, -0.1, 0.1)
                         qdot = qdot.tolist()[0]
                     else:
@@ -144,18 +142,26 @@ def main(model_name, max_runs):
 
                     if curr_time - start_time >= steptime:
                         elapsed_time = curr_time - assist_time
-                        if done:
-                            reward = -50 * (len(goals) - goal_idx - 1)
                         data.append([elapsed_time] + [q] + [qdot_h.tolist()] + [qdot_r] + [float(alpha)] + [z] + [reward])
                         start_time = curr_time
-                        print("model: {0} task: {1} run: {2} qdot_h:{3:2.1f} qdot_r:{4:2.1f} alpha:{5:2.1f} reward:{6:2.1f}"\
-                            .format("_".join(model_name), task, run, np.linalg.norm(qdot_h), np.linalg.norm(qdot_r), float(alpha),\
-                             float(reward)))
+                        # print("model: {0} task: {1} run: {2} qdot_h:{3:2.1f} qdot_r:{4:2.1f} alpha:{5:2.1f} reward:{6:2.1f}"\
+                        #     .format("_".join(model_name), task, run, np.linalg.norm(qdot_h), np.linalg.norm(qdot_r), float(alpha),\
+                        #      float(reward)))
                         cum_reward += reward
-                    # print(qdot)
-                    # stop robot from hitting table
-                    # print(qdot)
-                    # print("---")
+
+                    if len(data) >= 155:
+                        cum_reward -= reward
+                        reward = 50 * compute_reward(np.array(goals[-1]), np.array(q))
+                        data[-1][-1] = reward
+                        cum_reward += reward
+                        print("model: {0} task: {1} cum_reward: {2:2.1f}".format("_".join(model_name), task, cum_reward))
+                        # print(50*compute_reward(np.array(goals[-1]), np.array(q)))
+                        # print(data[-1][-1], reward)
+                        # reward = -50 * (len(goals) - goal_idx - 1)
+                        # print(len(goals), goal_idx)
+                        # print(data[-1][-1], reward)
+                        done = True
+
                     qdot = mover.compute_limits(qdot)
                     
                     if done:
@@ -193,7 +199,7 @@ if __name__ == "__main__":
                       ["open2", "open1", "scoop2", "scoop1", "cut2", "cut1", "push2"],
                       ["open2", "open1", "scoop2", "scoop1", "cut2", "cut1", "push2", "push1"]]
 
-    max_runs = 1
+    max_runs = 5
     rewards = {}
     for model_name in model_names:
         try:

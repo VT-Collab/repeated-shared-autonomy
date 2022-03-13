@@ -14,16 +14,13 @@ def main():
                       ["open2", "open1", "scoop2", "scoop1", "cut2", "cut1"],\
                       ["open2", "open1", "scoop2", "scoop1", "cut2", "cut1", "push2"],
                       ["open2", "open1", "scoop2", "scoop1", "cut2", "cut1", "push2", "push1"]]
-    # tasklist = [["open2"], ["open2", "open1"], ["open2", "open1", "scoop2"],\
-    #                   ["open2", "open1", "scoop2", "scoop1"], ["open2", "open1", "scoop2", "scoop1", "cut2"],\
-    #                   ["open2", "open1", "scoop2", "scoop1", "cut2", "cut1"],\
-    #                   ["open2", "open1", "scoop2", "scoop1", "cut2", "cut1", "push2"],
-                      # ["open2", "open1", "scoop2", "scoop1", "cut2", "cut1", "push2", "push1"]]
 
     optimal_rewards = pickle.load(open("optimal_rewards.pkl", "rb"))
-
+    # print(optimal_rewards)
     method_rewards = pickle.load(open("rewards_old.pkl", "rb"))
-    # print(method_rewards)
+    
+
+    tasklist = tasklist[:len(method_rewards)]
     normalized_regret = {}
     model_names = []
 
@@ -38,7 +35,11 @@ def main():
                     for a_i, b_i in zip(human_only_rewards, rewards_per_model)]))
 
     sorted_regrets = [normalized_regret[model_name] for model_name in model_names]
-    print(sorted_regrets)
+    if len(sorted_regrets) <= 8:
+        print(sorted_regrets)
+    else:
+        print(sorted_regrets[:8])
+        print(sorted_regrets[8:])
 
     # fig, axs = plt.subplots(2,1)
 
