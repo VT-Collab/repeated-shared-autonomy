@@ -16,54 +16,51 @@ def main():
                       ["open2", "open1", "scoop2", "scoop1", "cut2", "cut1", "push2", "push1"]]
 
     optimal_rewards = pickle.load(open("optimal_rewards.pkl", "rb"))
-    # print(optimal_rewards)
-    method_rewards = pickle.load(open("rewards_old_alpha_0.8_runs_5.pkl", "rb"))
-    
 
-    tasklist = tasklist[:len(method_rewards)]
-    normalized_regret = {}
-    model_names = []
+    files = ["rewards_old_alpha_0.8_runs_5.pkl", "rewards_old_alpha_nolimit_runs_5.pkl"]
+    total_regrets = []
+    for file in files:
+        method_rewards = pickle.load(open(file, "rb"))
+        
+        tasklist = tasklist[:len(method_rewards)]
+        normalized_regret = {}
+        model_names = []
 
-    for tasks in tasklist:
-        # print(tasks)
-        model_name = "_".join(tasks)
-        model_names.append(model_name)
-        rewards_per_model = method_rewards[model_name]
-        # print(rewards_per_model)
-        human_only_rewards = [optimal_rewards[task] for task in tasks]
-        normalized_regret[model_name] = float(np.mean([(a_i - b_i)/abs(a_i) \
-                    for a_i, b_i in zip(human_only_rewards, rewards_per_model)]))
+        for tasks in tasklist:
+            # print(tasks)
+            model_name = "_".join(tasks)
+            model_names.append(model_name)
+            rewards_per_model = method_rewards[model_name]
+            # print(rewards_per_model)
+            human_only_rewards = [optimal_rewards[task][0] for task in tasks]
+            normalized_regret[model_name] = float(np.mean([(a_i - b_i)/abs(a_i) \
+                        for a_i, b_i in zip(human_only_rewards, rewards_per_model)]))
+            if model_name == "open2":
+                print(optimal_rewards["open2"], method_rewards["open2"], normalized_regret["open2"])
+        sorted_regrets = [normalized_regret[model_name] for model_name in model_names]
+        total_regrets.append(sorted_regrets)
+        # if len(sorted_regrets) <= 8:
+        #     print(sorted_regrets)
+        # else:
+        #     print(sorted_regrets[:8])
+        #     print(sorted_regrets[8:])
+    fig, axs = plt.subplots(2,1)
+    x = np.arange(1, 9)
+    width = 0.35
+    start = 0
+    end = 8
+    for ax in axs.ravel():
+        ax.bar(x - width/2, total_regrets[0][start:end], width, label="fixed blending")
+        ax.bar(x + width/2, total_regrets[1][start:end], width, label="alpha = [0,0.6]")
+        ax.set_ylabel("normalized_regret")
+        start += 8
+        end += 8
+    ax.set_xlabel("skills learned")
+    handles, labels = ax.get_legend_handles_labels()
+    fig.legend(handles, labels)
 
-    sorted_regrets = [normalized_regret[model_name] for model_name in model_names]
-    if len(sorted_regrets) <= 8:
-        print(sorted_regrets)
-    else:
-        print(sorted_regrets[:8])
-        print(sorted_regrets[8:])
-
-    # fig, axs = plt.subplots(2,1)
-
-    # axs[0].bar(np.arange(8), sorted_regrets[:8])
-    # axs[1].bar(np.arange(len(sorted_regrets[8:])), sorted_regrets[8:])
-    # axs[0].set_xticks(np.arange(8))
-    # axs[0].set_xticklabels(model_names[:8])
-    # axs[1].set_xticks(np.arange(len(sorted_regrets[8:])))
-    # axs[1].set_xticklabels(model_names[8:])
-    # for ax in axs:
-    #     ax.set_ylabel('human_only_rewards - method_rewards')
-
-    # plt.show()
-    # method_rewards = {}
-    # folder = "runs/no_steptime"
-    # rewards_per_model = {}    
-    # for filename in os.listdir(folder):
-    #     run = pickle.load(open(folder + "/" + filename, "rb"))
-    #     rewards_per_model["model"] = run["model"]
-    #     rewards_per_model["task"] = run["task"]
-    #     rewards_per_model["reward"] = 
-
-
-
+    plt.suptitle("regret vs models")
+    plt.show()
 
 
 if __name__ == "__main__":

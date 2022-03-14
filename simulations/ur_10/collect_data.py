@@ -133,8 +133,8 @@ def main(model_name, max_runs):
 
                     if assist:
                         # alpha = .8
-                        qdot = (alpha * 2.5 * np.asarray(qdot_r) + (1-alpha) * np.asarray(qdot_h))#*2.0
-                        # qdot = (0.8 * 2.5 * np.asarray(qdot_r) + 0.2 * np.asarray(qdot_h))#*2.0
+                        # qdot = (alpha * 2.5 * np.asarray(qdot_r) + (1-alpha) * np.asarray(qdot_h))#*2.0
+                        qdot = (0.8 * 2.5 * np.asarray(qdot_r) + 0.2 * np.asarray(qdot_h))#*2.0
                         qdot = np.clip(qdot, -0.1, 0.1)
                         qdot = qdot.tolist()[0]
                     else:
@@ -198,7 +198,8 @@ if __name__ == "__main__":
     #                   ["open2", "open1", "scoop2", "scoop1", "cut2", "cut1"],\
     #                   ["open2", "open1", "scoop2", "scoop1", "cut2", "cut1", "push2"],
     #                   ["open2", "open1", "scoop2", "scoop1", "cut2", "cut1", "push2", "push1"]]
-    model_names = [["push1"], ["push2"], ["cut1"], ["cut2"], ["scoop1"], ["scoop2"], ["open1"], ["open2"]]
+    # model_names = [["push1"], ["push2"], ["cut1"], ["cut2"], ["scoop1"], ["scoop2"], ["open1"], ["open2"]]
+    model_names = [["open2"]]
     max_runs = 5
     rewards = {}
     for model_name in model_names:
