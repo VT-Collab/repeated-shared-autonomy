@@ -188,17 +188,17 @@ def main(model_name, max_runs):
         return reward_per_task
 
 if __name__ == "__main__":
-    model_names = [["push1"], ["push1", "push2"], ["push1", "push2", "cut1"],\
-                      ["push1", "push2", "cut1", "cut2"], ["push1", "push2", "cut1", "cut2", "scoop1"],\
-                      ["push1", "push2", "cut1", "cut2", "scoop1", "scoop2"],\
-                      ["push1", "push2", "cut1", "cut2", "scoop1", "scoop2", "open1"],\
-                      ["push1", "push2", "cut1", "cut2", "scoop1", "scoop2", "open1", "open2"],
-                      ["open2"], ["open2", "open1"], ["open2", "open1", "scoop2"],\
-                      ["open2", "open1", "scoop2", "scoop1"], ["open2", "open1", "scoop2", "scoop1", "cut2"],\
-                      ["open2", "open1", "scoop2", "scoop1", "cut2", "cut1"],\
-                      ["open2", "open1", "scoop2", "scoop1", "cut2", "cut1", "push2"],
-                      ["open2", "open1", "scoop2", "scoop1", "cut2", "cut1", "push2", "push1"]]
-
+    # model_names = [["push1"], ["push1", "push2"], ["push1", "push2", "cut1"],\
+    #                   ["push1", "push2", "cut1", "cut2"], ["push1", "push2", "cut1", "cut2", "scoop1"],\
+    #                   ["push1", "push2", "cut1", "cut2", "scoop1", "scoop2"],\
+    #                   ["push1", "push2", "cut1", "cut2", "scoop1", "scoop2", "open1"],\
+    #                   ["push1", "push2", "cut1", "cut2", "scoop1", "scoop2", "open1", "open2"],
+    #                   ["open2"], ["open2", "open1"], ["open2", "open1", "scoop2"],\
+    #                   ["open2", "open1", "scoop2", "scoop1"], ["open2", "open1", "scoop2", "scoop1", "cut2"],\
+    #                   ["open2", "open1", "scoop2", "scoop1", "cut2", "cut1"],\
+    #                   ["open2", "open1", "scoop2", "scoop1", "cut2", "cut1", "push2"],
+    #                   ["open2", "open1", "scoop2", "scoop1", "cut2", "cut1", "push2", "push1"]]
+    model_names = [["push1"], ["push2"], ["cut1"], ["cut2"], ["scoop1"], ["scoop2"], ["open1"], ["open2"]]
     max_runs = 5
     rewards = {}
     for model_name in model_names:
