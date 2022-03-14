@@ -17,7 +17,7 @@ def main():
 
     optimal_rewards = pickle.load(open("optimal_rewards.pkl", "rb"))
     # print(optimal_rewards)
-    method_rewards = pickle.load(open("rewards_old.pkl", "rb"))
+    method_rewards = pickle.load(open("rewards_old_alpha_0.8_runs_5.pkl", "rb"))
     
 
     tasklist = tasklist[:len(method_rewards)]

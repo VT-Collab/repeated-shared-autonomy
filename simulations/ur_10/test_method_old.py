@@ -81,7 +81,7 @@ def run_test(model_name, test_task):
     traj = []
     alphas = []
     assist = False
-    assist_start = 8.0
+    assist_start = 155.0
     start_time = time.time()
     assist_time = time.time()
     while not rospy.is_shutdown():
@@ -160,17 +160,17 @@ def main():
     # test_task = [sys.argv[2]]
     # model_names = ["push1", "push2", "cut1", "cut2", "scoop1", "scoop2",\
     #                   "open1", "open2"]
-    # model_names = [["push1"], ["push1", "push2"], ["push1", "push2", "cut1"],\
-    #                   ["push1", "push2", "cut1", "cut2"], ["push1", "push2", "cut1", "cut2", "scoop1"],\
-    #                   ["push1", "push2", "cut1", "cut2", "scoop1", "scoop2"],\
-    #                   ["push1", "push2", "cut1", "cut2", "scoop1", "scoop2", "open1"],\
-    #                   ["push1", "push2", "cut1", "cut2", "scoop1", "scoop2", "open1", "open2"],
-    #                   ["open2"], ["open2", "open1"], ["open2", "open1", "scoop2"],\
-    #                   ["open2", "open1", "scoop2", "scoop1"], ["open2", "open1", "scoop2", "scoop1", "cut2"],\
-    #                   ["open2", "open1", "scoop2", "scoop1", "cut2", "cut1"],\
-    #                   ["open2", "open1", "scoop2", "scoop1", "cut2", "cut1", "push2"],
-    #                   ["open2", "open1", "scoop2", "scoop1", "cut2", "cut1", "push2", "push1"]]
-    model_names = [["push1", "push2"], ["push1", "push2", "cut1"]]
+    model_names = [["push1"], ["push1", "push2"], ["push1", "push2", "cut1"],\
+                      ["push1", "push2", "cut1", "cut2"], ["push1", "push2", "cut1", "cut2", "scoop1"],\
+                      ["push1", "push2", "cut1", "cut2", "scoop1", "scoop2"],\
+                      ["push1", "push2", "cut1", "cut2", "scoop1", "scoop2", "open1"],\
+                      ["push1", "push2", "cut1", "cut2", "scoop1", "scoop2", "open1", "open2"],
+                      ["open2"], ["open2", "open1"], ["open2", "open1", "scoop2"],\
+                      ["open2", "open1", "scoop2", "scoop1"], ["open2", "open1", "scoop2", "scoop1", "cut2"],\
+                      ["open2", "open1", "scoop2", "scoop1", "cut2", "cut1"],\
+                      ["open2", "open1", "scoop2", "scoop1", "cut2", "cut1", "push2"],
+                      ["open2", "open1", "scoop2", "scoop1", "cut2", "cut1", "push2", "push1"]]
+    # model_names = [["push1", "push2"], ["push1", "push2", "cut1"]]
     test_tasks = ["push1", "push2", "cut1", "cut2", "scoop1", "scoop2",\
                       "open1", "open2"]                      
     results = {}
