@@ -48,12 +48,12 @@ class CAE(nn.Module):
             nn.Tanh(),
             # nn.Linear(10, 10),
             # nn.Tanh(),
-            nn.Linear(10, 2)
+            nn.Linear(10, 8)
         )
 
         # Policy
         self.dec = nn.Sequential(
-            nn.Linear(8, 30),
+            nn.Linear(14, 30),
             nn.Tanh(),
             nn.Linear(30, 30),
             nn.Tanh(),
@@ -147,18 +147,18 @@ def train_cae(tasklist, max_demos):
         torch.save(model.state_dict(), savename)
 
 def main():
-    # required_tasks = [["push1"], ["push1", "push2"], ["push1", "push2", "cut1"],\
-    #                   ["push1", "push2", "cut1", "cut2"], ["push1", "push2", "cut1", "cut2", "scoop1"],\
-    #                   ["push1", "push2", "cut1", "cut2", "scoop1", "scoop2"],\
-    #                   ["push1", "push2", "cut1", "cut2", "scoop1", "scoop2", "open1"],\
-    #                   ["push1", "push2", "cut1", "cut2", "scoop1", "scoop2", "open1", "open2"],
-    #                   ["open2"], ["open2", "open1"], ["open2", "open1", "scoop2"],\
-    #                   ["open2", "open1", "scoop2", "scoop1"], ["open2", "open1", "scoop2", "scoop1", "cut2"],\
-    #                   ["open2", "open1", "scoop2", "scoop1", "cut2", "cut1"],\
-    #                   ["open2", "open1", "scoop2", "scoop1", "cut2", "cut1", "push2"],
-    #                   ["open2", "open1", "scoop2", "scoop1", "cut2", "cut1", "push2", "push1"]]
+    required_tasks = [["push1"], ["push1", "push2"], ["push1", "push2", "cut1"],\
+                      ["push1", "push2", "cut1", "cut2"], ["push1", "push2", "cut1", "cut2", "scoop1"],\
+                      ["push1", "push2", "cut1", "cut2", "scoop1", "scoop2"],\
+                      ["push1", "push2", "cut1", "cut2", "scoop1", "scoop2", "open1"],\
+                      ["push1", "push2", "cut1", "cut2", "scoop1", "scoop2", "open1", "open2"],
+                      ["open2"], ["open2", "open1"], ["open2", "open1", "scoop2"],\
+                      ["open2", "open1", "scoop2", "scoop1"], ["open2", "open1", "scoop2", "scoop1", "cut2"],\
+                      ["open2", "open1", "scoop2", "scoop1", "cut2", "cut1"],\
+                      ["open2", "open1", "scoop2", "scoop1", "cut2", "cut1", "push2"],
+                      ["open2", "open1", "scoop2", "scoop1", "cut2", "cut1", "push2", "push1"]]
     # required_tasks = [["push2"], ["cut1"], ["cut2"], ["scoop1"], ["scoop2"], ["open1"], ["open2"]]
-    required_tasks = [["open2"]]
+    # required_tasks = [["open2"]]
     max_demos = 15
     for tasklist in required_tasks:
         print("[*] Training for task: ", tasklist)
