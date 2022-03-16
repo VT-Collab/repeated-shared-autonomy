@@ -115,7 +115,12 @@ def main():
                       ["push1", "push2", "cut1", "cut2"], ["push1", "push2", "cut1", "cut2", "scoop1"],\
                       ["push1", "push2", "cut1", "cut2", "scoop1", "scoop2"],\
                       ["push1", "push2", "cut1", "cut2", "scoop1", "scoop2", "open1"],\
-                      ["push1", "push2", "cut1", "cut2", "scoop1", "scoop2", "open1", "open2"]]
+                      ["push1", "push2", "cut1", "cut2", "scoop1", "scoop2", "open1", "open2"],
+                      ["open2"], ["open2", "open1"], ["open2", "open1", "scoop2"]]#,\
+                      # ["open2", "open1", "scoop2", "scoop1"], ["open2", "open1", "scoop2", "scoop1", "cut2"],\
+                      # ["open2", "open1", "scoop2", "scoop1", "cut2", "cut1"],\
+                      # ["open2", "open1", "scoop2", "scoop1", "cut2", "cut1", "push2"],
+                      # ["open2", "open1", "scoop2", "scoop1", "cut2", "cut1", "push2", "push1"]]
     
     tasks = ["push1", "push2", "cut1", "cut2", "scoop1", "scoop2",\
                       "open1", "open2"] 
@@ -125,10 +130,11 @@ def main():
     labels =["fixed blend", "alpha = [0,0.6]"]
     colors = ['tab:blue', 'tab:orange']
     for task in tasks:
-        fig, axs = plt.subplots(2, 4, subplot_kw={'projection': '3d'})
+        fig1, axs1 = plt.subplots(2, 4, subplot_kw={'projection': '3d'}, sharex=True, sharey=True)
+        fig2, axs2 = plt.subplots(2, 4, subplot_kw={'projection': '3d'}, sharex=True, sharey=True)
         i = 0
         for folder in folders:
-            for tasks, ax in zip(tasklist, axs.ravel()):
+            for tasks, ax1, ax2 in zip(tasklist, axs1.ravel(), axs2.ravel()):
                 mark = False
                 for filename in os.listdir(folder):
                     if not filename[0] == "m":
@@ -137,32 +143,32 @@ def main():
                     model_name = "_".join(tasks)
                     if demo["model"] == model_name and demo["task"] == task:
                         traj = np.array([kin_cli.joint2pose(item[1]) for item in demo["data"]])
-                        # ax = fig.gca(projection='3d')
                         if not mark:
-                            ax.scatter(traj[0,0], traj[0,1], traj[0,2], 'rx')
+                            ax1.scatter(traj[0,0], traj[0,1], traj[0,2], 'rx')
+                            ax2.scatter(traj[0,3], traj[0,4], traj[0,5], 'rx')
                             mark = True
-                        ax.view_init(elev=60, azim=60) 
-                        ax.plot(traj[:,0], traj[:,1], traj[:,2], color=colors[i], label=labels[i])
-                        # ax.set_xlim(0,0.3)
-                        # ax.set_ylim(0.5,1.1)
-                        # ax.set_zlim(0.25,0.6)
+                        ax1.plot(traj[:,0], traj[:,1], traj[:,2], color=colors[i], label=labels[i])
+                        ax2.plot(traj[:,3], traj[:,4], traj[:,5], color=colors[i], label=labels[i])
+                        if demo["run"] == 1:
+                            individual_folder = "runs/individual_models"
+                            fnames = ["model_" + task + "_task_" + task + "_" + str(demo_num) + ".pkl" for demo_num in range(1,6)]
+                            for fname in fnames:
+                                demo = pickle.load(open(individual_folder + "/" + fname, "rb"))
+                                traj = np.array([kin_cli.joint2pose(item[1]) for item in demo["data"]])
+                                # ax.view_init(elev=60, azim=60) 
+                                ax1.plot(traj[:,0], traj[:,1], traj[:,2], color='tab:green', label="ideal")
+                                ax2.plot(traj[:,3], traj[:,4], traj[:,5], color='tab:green', label="ideal")
             i += 1
-        for i, ax in enumerate(axs.ravel()):
-            if i == 0 and not task in ["push1"]:
-                name = "model_" + task + "_" + task
-                for filename in os.listdir("runs/individual_models"):
-                    if filename[:len(name)] == name:
-                        demo = pickle.load(open(folder + "/" + filename, "rb"))
-                        traj = np.array([kin_cli.joint2pose(item[1]) for item in demo["data"]])
-                        ax.view_init(elev=60, azim=60) 
-                        ax.plot(traj[:,0], traj[:,1], traj[:,2], color=colors[i], label=labels[i])
-
-            ax.title.set_text('Models trained: ' + str(i+1))
+        for i, (ax1, ax2) in enumerate(zip(axs1.ravel(), axs2.ravel())):
+            ax1.title.set_text('Models trained: ' + str(i+1))
+            ax2.title.set_text('Models trained: ' + str(i+1))
 
         
-        handles, labels = ax.get_legend_handles_labels()
-        fig.legend(handles, labels)
-        plt.suptitle("trajectories for " + task + " with models trained from one task to 8 tasks")    
+        handles, labels = ax1.get_legend_handles_labels()
+        fig1.legend(handles, labels)
+        fig2.legend(handles, labels)
+        fig1.suptitle("XYZ trajectories for " + task + " with models trained from one task to 8 tasks")    
+        fig2.suptitle("RPY trajectories for " + task + " with models trained from one task to 8 tasks")    
     plt.show()
 
 if __name__ == "__main__":

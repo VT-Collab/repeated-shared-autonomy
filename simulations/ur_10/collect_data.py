@@ -68,8 +68,8 @@ def main(model_name, max_runs):
     mover = TrajectoryClient()
     joystick = JoystickControl()
 
-    cae_model = 'models/' + 'cae_' + "_".join(model_name) + "_old"
-    class_model = 'models/' + 'class_' + "_".join(model_name) + "_old"
+    cae_model = 'models/latent_z_2/' + 'cae_' + "_".join(model_name) + "_old"
+    class_model = 'models/latent_z_2/' + 'class_' + "_".join(model_name) + "_old"
     model = Model(class_model, cae_model)
     
     while not rospy.is_shutdown():
@@ -199,7 +199,7 @@ if __name__ == "__main__":
     #                   ["open2", "open1", "scoop2", "scoop1", "cut2", "cut1", "push2"],
     #                   ["open2", "open1", "scoop2", "scoop1", "cut2", "cut1", "push2", "push1"]]
     # model_names = [["push1"], ["push2"], ["cut1"], ["cut2"], ["scoop1"], ["scoop2"], ["open1"], ["open2"]]
-    model_names = [["open2"]]
+    model_names = [["push1"]]
     max_runs = 5
     rewards = {}
     for model_name in model_names:
