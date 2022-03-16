@@ -72,7 +72,7 @@ class Net(nn.Module):
 
 
 def deform(xi, start, length, tau):
-    length += np.random.choice(np.arange(ceil(length/10), length))
+    length += np.random.choice(np.arange(int(length/10), length))
     xi1 = copy.deepcopy(np.asarray(xi))
     A = np.zeros((length+2, length))
     for idx in range(length):
@@ -86,6 +86,8 @@ def deform(xi, start, length, tau):
         U[0] = tau[idx]
         gamma[:,idx] = np.dot(R, U)
     end = min([start+length, xi1.shape[0]-1])
+    print(start)
+    print(end)
     xi1[start:end+1,:] += gamma[0:end-start+1,:]
     return xi1
 
@@ -121,7 +123,7 @@ def train_classifier(tasks):
         for snip in snippets:
             tau = np.random.uniform([-0.00045]*3, [0.00045]*3)
             deform_len = len(snip)
-            start = np.random.choice(np.arange(0, deform_len/2))
+            start = np.random.choice(np.arange(0, int(deform_len/2)))
             for i in range(deformed_samples):
                 snip_deformed = deform(snip, start, deform_len, tau)
                 snip = snip_deformed
