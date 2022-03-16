@@ -66,8 +66,8 @@ def main():
         t_nlimit = []
         t_limit = []
         for task in trajs_nolimit:
-            trajs_nolimit[task] = float(np.linalg.norm(np.mean(trajs_nolimit[task], axis=0) - optimal_traj[task]))
-            trajs_limit[task] = float(np.linalg.norm(np.mean(trajs_limit[task], axis=0) - optimal_traj[task]))
+            trajs_nolimit[task] = float(np.linalg.norm(np.mean(trajs_nolimit[task] - optimal_traj[task], axis=0)))
+            trajs_limit[task] = float(np.linalg.norm(np.mean(trajs_limit[task] - optimal_traj[task], axis=0)))
             t_nlimit.append([trajs_nolimit[task]])
             t_limit.append([trajs_limit[task]])
         # print(t_nlimit)
