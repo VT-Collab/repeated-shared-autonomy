@@ -33,7 +33,7 @@ import sys
 # print(traj2-traj1)
 
 def main():
-    
+
     num_goals = sys.argv[1]
     effort = np.zeros(int(num_goals))
     alpha = np.zeros(int(num_goals))
@@ -42,7 +42,7 @@ def main():
     goals_plt = []
     start = [0.26021528, -0.60000002, 0.85696614]
 
-    
+
     for goal in range (int(num_goals)):
         error_loc = 0
         error_per = 0
@@ -56,12 +56,12 @@ def main():
             for j in range (int(goal+1)):
                 filename_effort = "effort/Effort/" + str(goal+1) + "/" + str(sim_num+1) + "_" + str(j+1) + ".pkl"
                 filename_alpha = "effort/Alpha/" + str(goal+1) + "/" + str(sim_num+1) + "_" + str(j+1) + ".pkl"
-                
+
 
                 effort_arr = pickle.load(open(filename_effort, "rb"))
                 alpha_arr = pickle.load(open(filename_alpha, "rb"))
 
-                effort[goal] = effort[goal] + np.mean(effort_arr) 
+                effort[goal] = effort[goal] + np.mean(effort_arr)
                 alpha[goal] = alpha[goal] + np.mean(alpha_arr)
                 error_loc = error_loc + np.linalg.norm(error_arr[j])
 
@@ -78,8 +78,8 @@ def main():
     # print(effort)
     # print(alpha)
 
-    fig1, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(10,10))
-    
+    fig1, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(15,10))
+
     ax1.plot(goals_plt, effort)
     ax1.set(xlim=(0, int(num_goals)+1), xticks=np.arange(0, int(num_goals)+1), ylim=(0, max(effort)*1.5), yticks=np.arange(0, max(effort)*1.5, max(effort)*0.15))
     ax1.set_xlabel("Number of Goals")
@@ -89,7 +89,7 @@ def main():
     ax2.set(xlim=(0, int(num_goals)+1), xticks=np.arange(0, int(num_goals)+1), ylim=(0, max(alpha)*1.5), yticks=np.arange(0, max(alpha)*1.5, max(alpha)*0.15))
     ax2.set_xlabel("Number of Goals")
     ax2.set_ylabel("Average Alpha")
-   
+
     ax3.plot(goals_plt, error)
     ax3.set(xlim=(0, int(num_goals)+1), xticks=np.arange(0, int(num_goals)+1), ylim=(0, max(error)*1.5), yticks=np.arange(0, max(error)*1.5, max(error)*0.15))
     ax3.set_xlabel("Number of Goals")
@@ -99,6 +99,7 @@ def main():
     ax4.set(xlim=(0, int(num_goals)+1), xticks=np.arange(0, int(num_goals)+1), ylim=(0, max(perc_error)*1.5), yticks=np.arange(0, max(perc_error)*1.5, max(perc_error)*0.15))
     ax4.set_xlabel("Number of Goals")
     ax4.set_ylabel("Average Final Percent Error")
+    plt.savefig('data.png')
     plt.show()
 
     # fig4= plt.figure()
@@ -107,7 +108,7 @@ def main():
     # # ax = fig.add_axes()
     # # ax.bar(goals,effort)
     # # plt.plot(alpha, error)
-    # ax4.set(xlim=(0, max(alpha)*1.5), xticks=np.arange(0, max(alpha)*1.5, max(alpha)*0.15), 
+    # ax4.set(xlim=(0, max(alpha)*1.5), xticks=np.arange(0, max(alpha)*1.5, max(alpha)*0.15),
     #         ylim=(0, max(error)*1.5), yticks=np.arange(0, max(error)*1.5, max(error)*0.15),
     #         zlim=(0, int(num_goals)+1), zticks=np.arange(0, int(num_goals)+1))
     # # plt.xlabel("Average Alpha")
@@ -117,11 +118,9 @@ def main():
     # ax4.set_zlabel('Numebr of Goals')
     # plt.show()
 
-        
-            
-            
+
+
+
 
 if __name__ == "__main__":
     main()
-
-
