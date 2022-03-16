@@ -19,6 +19,7 @@ def main():
     ideal_folder = "runs/individual_models"
     nolimit_folder = "runs/alpha_nolimit"
     limit_folder = "runs/alpha_0.8"
+    latent_8_folder = "runs/latent_z_8"
 
     optimal_traj = {}
     for filename in os.listdir(ideal_folder):
@@ -37,15 +38,18 @@ def main():
     
     nolimit_traj = {}
     limit_traj = {}
+    latent_traj = {}
     model_names = []
     for taskset in tasklist:
         model_name = "_".join(taskset)
         model_names.append(model_name)
         trajs_nolimit = {}
         trajs_limit = {}
+        trajs_latent = {}
         for filename in os.listdir(nolimit_folder):
             if not filename[0] == "m":
                 continue
+            # alpha = [0, 0.6]
             demo = pickle.load(open(nolimit_folder + "/" + filename, "rb"))
             if not model_name == demo["model"]:
                 continue
@@ -55,7 +59,7 @@ def main():
                 trajs_nolimit[task] = np.append(trajs_nolimit[task], curr_traj, axis=0)
             else:
                 trajs_nolimit[task] = np.array([item[1] for item in demo["data"]]).reshape(1, len(demo["data"]), 6)
-
+            # fixed alpha
             demo = pickle.load(open(limit_folder + "/" + filename, "rb"))
             task = demo["task"]
             if task in trajs_limit:
@@ -63,29 +67,43 @@ def main():
                 trajs_limit[task] = np.append(trajs_limit[task], curr_traj, axis=0)
             else:
                 trajs_limit[task] = np.array([item[1] for item in demo["data"]]).reshape(1, len(demo["data"]), 6)
+            # latent z = 8 dimensional
+            demo = pickle.load(open(latent_8_folder + "/" + filename, "rb"))
+            task = demo["task"]
+            if task in trajs_latent:
+                curr_traj = np.array([item[1] for item in demo["data"]]).reshape(1, len(demo["data"]), 6)
+                trajs_latent[task] = np.append(trajs_latent[task], curr_traj, axis=0)
+            else:
+                trajs_latent[task] = np.array([item[1] for item in demo["data"]]).reshape(1, len(demo["data"]), 6)
         t_nlimit = []
         t_limit = []
+        t_latent = []
         for task in trajs_nolimit:
             trajs_nolimit[task] = float(np.linalg.norm(np.mean(trajs_nolimit[task] - optimal_traj[task], axis=0)))
             trajs_limit[task] = float(np.linalg.norm(np.mean(trajs_limit[task] - optimal_traj[task], axis=0)))
+            trajs_latent[task] = float(np.linalg.norm(np.mean(trajs_latent[task] - optimal_traj[task], axis=0)))
             t_nlimit.append([trajs_nolimit[task]])
             t_limit.append([trajs_limit[task]])
+            t_latent.append([trajs_latent[task]])
         # print(t_nlimit)
         nolimit_traj[model_name] = np.mean(t_nlimit)
         limit_traj[model_name] = np.mean(t_limit)
+        latent_traj[model_name] = np.mean(t_latent)
 
     # print(nolimit_traj)
     # print(limit_traj)
     nolimit = [nolimit_traj[model_name] for model_name in model_names]
     limit = [limit_traj[model_name] for model_name in model_names]
+    latent = [latent_traj[model_name] for model_name in model_names]
     fig, axs = plt.subplots(2,1)
     x = np.arange(1, 9)
-    width = 0.35
+    width = 0.2
     start = 0
     end = 8
     for ax in axs.ravel():
-        ax.bar(x - width/2, limit[start:end], width, label="fixed blending")
-        ax.bar(x + width/2, nolimit[start:end], width, label="alpha = [0,0.6]")
+        ax.bar(x - width, limit[start:end], width, label="fixed blending")
+        ax.bar(x, nolimit[start:end], width, label="alpha = [0,0.6]")
+        ax.bar(x + width, latent[start:end], width, label="latent dim = 8")
         ax.set_ylabel("regret = mean dist between ideal traj and model traj")
         start += 8
         end += 8
