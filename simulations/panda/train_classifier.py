@@ -72,20 +72,21 @@ class Net(nn.Module):
 
 
 def deform(xi, start, length, tau):
+    length += np.random.choice(np.arange(ceil(length/10), length))
     xi1 = copy.deepcopy(np.asarray(xi))
     A = np.zeros((length+2, length))
     for idx in range(length):
         A[idx, idx] = 1
         A[idx+1,idx] = -2
         A[idx+2,idx] = 1
-    R = np.linalg.inv(A.T @ A)
+    R = np.linalg.inv(np.dot(A.T, A))
     U = np.zeros(length)
     gamma = np.zeros((length, 3))
     for idx in range(3):
         U[0] = tau[idx]
-        gamma[:,idx] = R @ U
+        gamma[:,idx] = np.dot(R, U)
     end = min([start+length, xi1.shape[0]-1])
-    xi1[start:end,:] += gamma[0:end-start,:]
+    xi1[start:end+1,:] += gamma[0:end-start+1,:]
     return xi1
 
 # train cAE
@@ -118,11 +119,11 @@ def train_classifier(tasks):
         snippets = np.array_split(traj, 1)
         deformed_samples = 2
         for snip in snippets:
-            tau = np.random.uniform([-0.05]*3, [0.05]*3)
+            tau = np.random.uniform([-0.00045]*3, [0.00045]*3)
             deform_len = len(snip)
-            start = 0
+            start = np.random.choice(np.arange(0, deform_len/2))
             for i in range(deformed_samples):
-                snip_deformed = deform(snip, 0, deform_len, tau)
+                snip_deformed = deform(snip, start, deform_len, tau)
                 snip = snip_deformed
                 # fake data
                 n_states = len(snip)
