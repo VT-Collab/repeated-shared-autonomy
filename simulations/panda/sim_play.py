@@ -228,7 +228,7 @@ def sim_play(goal_numbers, iter):
         
 def main():
     max_goals = sys.argv[1]
-    for goal_numbers in range(int(max_goals)):
+    for goal_numbers in range(12,int(max_goals)+1):
         for iter in range(5):
             sim_play(goal_numbers, iter)
 
