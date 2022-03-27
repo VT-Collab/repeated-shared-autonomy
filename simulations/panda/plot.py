@@ -99,7 +99,7 @@ def main():
     ax4.set(xlim=(0, int(num_goals)+1), xticks=np.arange(0, int(num_goals)+1), ylim=(0, max(perc_error)*1.5), yticks=np.arange(0, max(perc_error)*1.5, max(perc_error)*0.15))
     ax4.set_xlabel("Number of Goals")
     ax4.set_ylabel("Average Final Percent Error")
-    plt.savefig('data_20_goals.png')
+    plt.savefig('data_' + str(num_goals) + '_goals.png')
     # plt.show()
 
     # fig4= plt.figure()
