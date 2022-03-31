@@ -144,9 +144,9 @@ def sim_play(goal_numbers, iter):
             assist_time = time.time()
             print('[*] Recording the demonstration...')
         
-        # if mode or len(effort) == 450:
-        if len(effort)>50:
-            if np.mean(velocity_arr[len(velocity_arr)-10:len(velocity_arr)]) < 0.04 or len(help) > 300:
+        if mode or len(effort) >= 75:
+        # if len(effort)>50:
+        #     if np.mean(velocity_arr[len(velocity_arr)-10:len(velocity_arr)]) < 0.04 or len(help) > 300:
                 record = False
                 assist = False
                 final_error.append(state["ee_position"] - goals[target_goal])
@@ -228,7 +228,7 @@ def sim_play(goal_numbers, iter):
         
 def main():
     max_goals = sys.argv[1]
-    for goal_numbers in range(24,int(max_goals)+1):
+    for goal_numbers in range(0,int(max_goals)+1):
         for iter in range(5):
             sim_play(goal_numbers, iter)
 
