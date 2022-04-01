@@ -110,7 +110,7 @@ def deform(xi, start, length, tau):
     return xi1
 
 # train cAE
-def train_classifier(tasklist, max_demos):
+def train_classifier(tasklist, max_demos, model_num):
     tasks = []
     for task in tasklist:
         for i in range(1, max_demos+1):
@@ -128,7 +128,7 @@ def train_classifier(tasklist, max_demos):
 
     true_cnt = 0
     false_cnt = 0
-    savename = 'data/' + 'class_' + "_".join(tasklist) + '_old.pkl'
+    savename = 'data/' + 'class_' + "_".join(tasklist) + "_" + model_num + '_old.pkl'
     for filename in os.listdir(folder):
         if not filename in tasks:
             continue
@@ -178,8 +178,8 @@ def train_classifier(tasklist, max_demos):
     # print("[*] false count: " + str(false_cnt) + " true: " + str(true_cnt))
 
     model = Net().to(device)
-    dataname = 'data/' + 'class_' + "_".join(tasklist) + '_old.pkl'
-    savename = 'models/' + 'class_' + "_".join(tasklist) + "_old"
+    dataname = 'data/' + 'class_' + "_".join(tasklist) + "_" + model_num + '_old.pkl'
+    savename = 'models/' + 'class_' + "_".join(tasklist) + "_" + model_num + "_old"
 
     EPOCH = 500
     # BATCH_SIZE_TRAIN = 10000
@@ -238,21 +238,23 @@ def train_classifier(tasklist, max_demos):
         torch.save(model.state_dict(), savename)
 
 def main():
-    # required_tasks = [["push1"], ["push1", "push2"], ["push1", "push2", "cut1"],\
-    #                   ["push1", "push2", "cut1", "cut2"], ["push1", "push2", "cut1", "cut2", "scoop1"],\
-    #                   ["push1", "push2", "cut1", "cut2", "scoop1", "scoop2"],\
-    #                   ["push1", "push2", "cut1", "cut2", "scoop1", "scoop2", "open1"],\
-    #                   ["push1", "push2", "cut1", "cut2", "scoop1", "scoop2", "open1", "open2"],
-    #                   ["open2"], ["open2", "open1"], ["open2", "open1", "scoop2"],\
-    #                   ["open2", "open1", "scoop2", "scoop1"], ["open2", "open1", "scoop2", "scoop1", "cut2"],\
-    #                   ["open2", "open1", "scoop2", "scoop1", "cut2", "cut1"],\
-    #                   ["open2", "open1", "scoop2", "scoop1", "cut2", "cut1", "push2"],
-    #                   ["open2", "open1", "scoop2", "scoop1", "cut2", "cut1", "push2", "push1"]]
-    required_tasks = [["push2"], ["cut1"], ["cut2"], ["scoop1"], ["scoop2"], ["open1"], ["open2"]]
+    required_tasks = [["push1"], ["push1", "push2"], ["push1", "push2", "cut1"],\
+                      ["push1", "push2", "cut1", "cut2"], ["push1", "push2", "cut1", "cut2", "scoop1"],\
+                      ["push1", "push2", "cut1", "cut2", "scoop1", "scoop2"],\
+                      ["push1", "push2", "cut1", "cut2", "scoop1", "scoop2", "open1"],\
+                      ["push1", "push2", "cut1", "cut2", "scoop1", "scoop2", "open1", "open2"],
+                      ["open2"], ["open2", "open1"], ["open2", "open1", "scoop2"],\
+                      ["open2", "open1", "scoop2", "scoop1"], ["open2", "open1", "scoop2", "scoop1", "cut2"],\
+                      ["open2", "open1", "scoop2", "scoop1", "cut2", "cut1"],\
+                      ["open2", "open1", "scoop2", "scoop1", "cut2", "cut1", "push2"],
+                      ["open2", "open1", "scoop2", "scoop1", "cut2", "cut1", "push2", "push1"]]
+    # required_tasks = [["push2"], ["cut1"], ["cut2"], ["scoop1"], ["scoop2"], ["open1"], ["open2"]]
     max_demos = 15
-    for tasklist in required_tasks:
-        print("[*] Training for task: ", tasklist)
-        train_classifier(tasklist, max_demos)
+    max_models = 20
+    for model_num in range(max_models):
+        for tasklist in required_tasks:
+            print("[*] Training for task: ", tasklist)
+            train_classifier(tasklist, max_demos, model_num)
 
 if __name__ == "__main__":
     main()

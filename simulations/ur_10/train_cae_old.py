@@ -80,7 +80,7 @@ class CAE(nn.Module):
         return self.loss_func(action_decoded, action_target)
 
 # train cAE
-def train_cae(tasklist, max_demos):
+def train_cae(tasklist, max_demos, model_num):
     tasks = []
     for task in tasklist:
         for i in range(1, max_demos+1):
@@ -92,7 +92,7 @@ def train_cae(tasklist, max_demos):
     noiselevel = 0.005
     noisesamples = 5
 
-    savename = 'data/' + 'cae_' + "_".join(tasklist) + '_old.pkl'
+    savename = 'data/' + 'cae_' + "_".join(tasklist) + "_" + model_num + '_old.pkl'
     for filename in os.listdir(folder):
         if not filename in tasks:
             continue
@@ -120,8 +120,8 @@ def train_cae(tasklist, max_demos):
     print("[*] I have this many subtrajectories: ", len(dataset))
 
     model = CAE().to(device)
-    dataname = 'data/' + 'cae_' + "_".join(tasklist) + '_old.pkl'
-    savename = 'models/' + 'cae_' + "_".join(tasklist) + "_old"
+    dataname = 'data/' + 'cae_' + "_".join(tasklist) + "_" + model_num + '_old.pkl'
+    savename = 'models/' + 'cae_' + "_".join(tasklist) + "_" + model_num + '_old'
 
     EPOCH = 500
     LR = 0.01
@@ -160,9 +160,11 @@ def main():
     # required_tasks = [["push2"], ["cut1"], ["cut2"], ["scoop1"], ["scoop2"], ["open1"], ["open2"]]
     # required_tasks = [["open2"]]
     max_demos = 15
-    for tasklist in required_tasks:
-        print("[*] Training for task: ", tasklist)
-        train_cae(tasklist, max_demos)
+    max_models = 20
+    for model_num in range(max_models):
+        for tasklist in required_tasks:
+            print("[*] Training for task: ", tasklist)
+            train_cae(tasklist, max_demos, model_num)
 
 
 if __name__ == "__main__":
