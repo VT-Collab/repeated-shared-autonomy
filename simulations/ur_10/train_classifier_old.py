@@ -128,7 +128,7 @@ def train_classifier(tasklist, max_demos, model_num):
 
     true_cnt = 0
     false_cnt = 0
-    savename = 'data/' + 'class_' + "_".join(tasklist) + "_" + model_num + '_old.pkl'
+    savename = 'data/' + 'class_' + "_".join(tasklist) + "_" + str(model_num) + '_old.pkl'
     for filename in os.listdir(folder):
         if not filename in tasks:
             continue
@@ -178,8 +178,8 @@ def train_classifier(tasklist, max_demos, model_num):
     # print("[*] false count: " + str(false_cnt) + " true: " + str(true_cnt))
 
     model = Net().to(device)
-    dataname = 'data/' + 'class_' + "_".join(tasklist) + "_" + model_num + '_old.pkl'
-    savename = 'models/' + 'class_' + "_".join(tasklist) + "_" + model_num + "_old"
+    dataname = 'data/' + 'class_' + "_".join(tasklist) + "_" + str(model_num) + '_old.pkl'
+    savename = 'models/' + 'class_' + "_".join(tasklist) + "_" + str(model_num) + "_old"
 
     EPOCH = 500
     # BATCH_SIZE_TRAIN = 10000

@@ -92,7 +92,7 @@ def train_cae(tasklist, max_demos, model_num):
     noiselevel = 0.005
     noisesamples = 5
 
-    savename = 'data/' + 'cae_' + "_".join(tasklist) + "_" + model_num + '_old.pkl'
+    savename = 'data/' + 'cae_' + "_".join(tasklist) + "_" + str(model_num) + '_old.pkl'
     for filename in os.listdir(folder):
         if not filename in tasks:
             continue
@@ -120,8 +120,8 @@ def train_cae(tasklist, max_demos, model_num):
     print("[*] I have this many subtrajectories: ", len(dataset))
 
     model = CAE().to(device)
-    dataname = 'data/' + 'cae_' + "_".join(tasklist) + "_" + model_num + '_old.pkl'
-    savename = 'models/' + 'cae_' + "_".join(tasklist) + "_" + model_num + '_old'
+    dataname = 'data/' + 'cae_' + "_".join(tasklist) + "_" + str(model_num) + '_old.pkl'
+    savename = 'models/' + 'cae_' + "_".join(tasklist) + "_" + str(model_num) + '_old'
 
     EPOCH = 500
     LR = 0.01
