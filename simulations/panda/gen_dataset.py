@@ -6,6 +6,7 @@ import pybullet_data
 import pickle
 from scipy.interpolate import interp1d
 import sys
+import time
 
 
 
@@ -25,7 +26,7 @@ def gen_dataset(tasks):
     
     env_goals = tasks
     goals = []
-    radius = 0.6
+    
     num_goals = int(env_goals)
     n_waypoints = 75
     rand_i = np.linspace(0.0, 1.0,num_goals+1)
@@ -36,6 +37,7 @@ def gen_dataset(tasks):
     # GENERATE A GIVEN NUMBER OF GOALS ON THE SURFACE OF A CYLINDER
     for i in range (num_goals):
         print(rand_i[i])
+        radius = np.random.uniform(0.2, 0.7)
         g = get_cylinder(radius,rand_i[i])
         goals.append(g)
         
@@ -49,7 +51,7 @@ def gen_dataset(tasks):
     states = env.state()
     ee_pos = state['ee_position']
     print(ee_pos)
-    # time.sleep(10)
+    time.sleep(10)
 
     for goal in range (num_goals):
         print("GOAL NUMBER ", goal)
@@ -96,7 +98,7 @@ def gen_dataset(tasks):
 
 
 def main():
-    num_tasks = 1
+    num_tasks = 20
     gen_dataset(num_tasks)
 
 

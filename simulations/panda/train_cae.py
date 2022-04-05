@@ -46,12 +46,12 @@ class CAE(nn.Module):
             nn.Tanh(),
             nn.Linear(10, 10),
             nn.Tanh(),
-            nn.Linear(10, 8)
+            nn.Linear(10, 2)
         )
 
         # Policy
         self.dec = nn.Sequential(
-            nn.Linear(11, 20),
+            nn.Linear(5, 20),
             nn.Tanh(),
             nn.Linear(20, 15),
             nn.Tanh(),
