@@ -161,7 +161,7 @@ def main():
     # required_tasks = [["open2"]]
     max_demos = 15
     max_models = 20
-    for model_num in range(max_models):
+    for model_num in range(5, max_models):
         for tasklist in required_tasks:
             print("[*] Training for task: ", tasklist)
             train_cae(tasklist, max_demos, model_num)
