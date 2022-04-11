@@ -76,7 +76,7 @@ class CAE(nn.Module):
         return self.loss_func(action_decoded, action_target)
 
 # train cAE
-def train_cae(tasks):
+def train_cae(tasks, model_no):
     # tasks = int(sys.argv[1])
     tasks = int(tasks)
 
@@ -86,7 +86,7 @@ def train_cae(tasks):
     noiselevel = 0.005
     noisesamples = 5
 
-    savename = 'data/' + 'cae_' + str(tasks) + '.pkl'
+    savename = 'data/' + 'cae_' + str(tasks) + "_" + str(model_no) +'.pkl'
     for filename in os.listdir(folder):
         traj = pickle.load(open(folder + "/" + filename, "rb"))
         # print(traj)
@@ -105,8 +105,8 @@ def train_cae(tasks):
     print("[*] I have this many subtrajectories: ", len(dataset))
 
     model = CAE().to(device)
-    dataname = 'data/' + 'cae_' + str(tasks) + '.pkl'
-    savename = 'models/' + 'cae_' + str(tasks)
+    dataname = 'data/' + 'cae_' + str(tasks) + "_" + str(model_no) +'.pkl'
+    savename = 'models/' + 'cae_' + str(tasks)+ "_" + str(model_no)
 
     EPOCH = 500
     LR = 0.01

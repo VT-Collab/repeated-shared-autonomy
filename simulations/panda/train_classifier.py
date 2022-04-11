@@ -107,7 +107,7 @@ def train_classifier(tasks):
     true_cnt = 0
     false_cnt = 0
 
-    savename = 'data/' + 'class_' + str(tasks) + '.pkl'
+    savename = 'data/' + 'class_' + str(tasks) + "_" + str(model_no) +'.pkl'
     for filename in os.listdir(folder):
         traj = pickle.load(open(folder + "/" + filename, "rb"))
         n_states = len(traj)
@@ -142,8 +142,8 @@ def train_classifier(tasks):
     print("[*] false count: " + str(false_cnt) + " true: " + str(true_cnt))
 
     model = Net().to(device)
-    dataname = 'data/' + 'class_' + str(tasks) + '.pkl'
-    savename = 'models/' + 'class_' + str(tasks)
+    dataname = 'data/' + 'class_' + str(tasks) + "_" + str(model_no) +'.pkl'
+    savename = 'models/' + 'class_' + str(tasks) + "_" + str(model_no)
 
     EPOCH = 500
     # BATCH_SIZE_TRAIN = 10000
