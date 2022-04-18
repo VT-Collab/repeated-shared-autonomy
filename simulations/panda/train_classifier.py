@@ -92,7 +92,7 @@ def deform(xi, start, length, tau):
     return xi1
 
 # train cAE
-def train_classifier(tasks):
+def train_classifier(tasks, model_no):
 
     # tasks = int(sys.argv[1])
     tasks = int(tasks)
