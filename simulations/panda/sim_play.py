@@ -92,8 +92,8 @@ def sim_play(goal_numbers, iter):
     sigma_d = np.identity(3) * 0.001
     demos_savename = "demos/" + str(filename) + ".pkl"
     data_savename = "runs/" + str(filename) + ".pkl"
-    cae_model = 'models/' + 'cae_' + str(tasks)
-    class_model = 'models/' + 'class_' + str(tasks)
+    cae_model = 'models/archive/' + 'cae_' + str(tasks)
+    class_model = 'models/archive/' + 'class_' + str(tasks)
     model = Model(class_model, cae_model)
     interface = Joystick()
 
