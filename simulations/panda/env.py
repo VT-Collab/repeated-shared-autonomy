@@ -13,7 +13,7 @@ class SimpleEnv():
         # create simulation (GUI)
         goals = pickle.load(open("goals/goals" + str(env_goals) + ".pkl", "rb"))
         self.urdfRootPath = pybullet_data.getDataPath()
-        p.connect(p.GUI)
+        p.connect(p.DIRECT)
         p.setGravity(0, 0, -9.81)
 
         # set up camera
