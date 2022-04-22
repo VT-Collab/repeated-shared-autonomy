@@ -87,11 +87,10 @@ def eval_policy(tasks, model_num, max_runs):
     tasks_pos = pickle.load(open("goals/goals" + str(tasks) + ".pkl", "rb"))
     
     for task in range(tasks):
-        env = SimpleEnv(tasks)
         for run in range(1, max_runs+1):
-            savename = "runs/" + "model_" + str(model_num) + "_task_" + str(task) \
+            savename = "runs/" + "model_" + str(model_num) + "_task_" + str(task+1) \
                         + "_run_" + str(run) + ".pkl" 
-
+            env = SimpleEnv(tasks)
             state = env.reset()
             state = state[-1]
             start_q = state['joint_position']
@@ -130,7 +129,7 @@ def eval_policy(tasks, model_num, max_runs):
                 alpha = min(alpha, 0.7)
 
                 if assist:
-                    xdot = alpha * xdot_r + (1- alpha) * 2 * xdot_h
+                    xdot = alpha * xdot_r + (1 - alpha) * 2 * xdot_h
                 else:
                     xdot = np.copy(xdot_h)
 
@@ -138,12 +137,12 @@ def eval_policy(tasks, model_num, max_runs):
                     elapsed_time = curr_time - assist_start_time
                     data.append([[elapsed_time] + [pose.tolist()] + [xdot_h.tolist()] + \
                                 [xdot_r.tolist()] + [float(alpha)] + [z] + [tasks_pos[task]]])
+                    print("model: {} task: {} run: {} timesteps: {}".format(model_num, task+1, run, len(data)))
                     start_time = curr_time
 
                 if len(data) >= 75:
                     done = True
-                    p.disconnect()
-                    print(len(data))
+                    env.close()
                     break
 
                 env.step(0.1 * xdot_h[:3])
@@ -163,8 +162,8 @@ def main():
     max_models = 20
     max_runs = 5
 
-    for tasks in range(1, max_tasks+1):
-        for model_num in range(1, max_models+1):
+    for model_num in range(1, max_models+1):
+        for tasks in range(1, model_num+1):
             eval_policy(tasks, model_num, max_runs)
     
 
