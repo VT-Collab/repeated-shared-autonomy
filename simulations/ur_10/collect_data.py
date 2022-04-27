@@ -60,7 +60,7 @@ MOVING_AVERAGE = 10
 
 
 
-def main(model_name, max_runs):
+def main(model_name, model_num, max_runs):
     
     rospy.init_node("data_collector")
     rate = rospy.Rate(1000)
@@ -68,8 +68,8 @@ def main(model_name, max_runs):
     mover = TrajectoryClient()
     joystick = JoystickControl()
 
-    cae_model = 'models/latent_z_8/' + 'cae_' + "_".join(model_name) + "_old"
-    class_model = 'models/' + 'class_' + "_".join(model_name) + "_old"
+    cae_model = 'models/' + 'cae_' + "_".join(model_name) + "_" + str(model_num) + "_old"
+    class_model = 'models/' + 'class_' + "_".join(model_name) + "_" + str(model_num) + "_old"
     model = Model(class_model, cae_model)
     
     while not rospy.is_shutdown():
@@ -79,8 +79,8 @@ def main(model_name, max_runs):
             for run in range(1, max_runs+1):
                 go2home()
                 # rospy.sleep(2)            
-                filename = "runs/" + "model_" + "_".join(model_name) + "_task_"\
-                             + task + "_" + str(run) + ".pkl"
+                filename = "runs/" + "model_" + "_".join(model_name) + "_modelnum_"\
+                 + str(model_num) + "_task_" + task + "_" + str(run) + ".pkl"
 
                 reward = 0
                 cum_reward = 0
@@ -173,7 +173,7 @@ def main(model_name, max_runs):
 
                 reward_per_run.append(cum_reward)
                 demonstration = {}
-                demonstration["model"] = "_".join(model_name)
+                demonstration["model"] = "_".join(model_name) + "_modelnum" + str(model_num)
                 demonstration["task"] = task
                 demonstration["run"] = run
                 demonstration["data"] = data
@@ -188,29 +188,34 @@ def main(model_name, max_runs):
         return reward_per_task
 
 if __name__ == "__main__":
-    model_names = [["push1"], ["push1", "push2"], ["push1", "push2", "cut1"],\
-                      ["push1", "push2", "cut1", "cut2"], ["push1", "push2", "cut1", "cut2", "scoop1"],\
-                      ["push1", "push2", "cut1", "cut2", "scoop1", "scoop2"],\
-                      ["push1", "push2", "cut1", "cut2", "scoop1", "scoop2", "open1"],\
-                      ["push1", "push2", "cut1", "cut2", "scoop1", "scoop2", "open1", "open2"],
-                      ["open2"], ["open2", "open1"], ["open2", "open1", "scoop2"],\
-                      ["open2", "open1", "scoop2", "scoop1"], ["open2", "open1", "scoop2", "scoop1", "cut2"],\
+    # model_names = [["push1"], ["push1", "push2"], ["push1", "push2", "cut1"],\
+    #                   ["push1", "push2", "cut1", "cut2"], ["push1", "push2", "cut1", "cut2", "scoop1"],\
+    #                   ["push1", "push2", "cut1", "cut2", "scoop1", "scoop2"],\
+    #                   ["push1", "push2", "cut1", "cut2", "scoop1", "scoop2", "open1"],\
+    #                   ["push1", "push2", "cut1", "cut2", "scoop1", "scoop2", "open1", "open2"],
+    #                   ["open2"], ["open2", "open1"], ["open2", "open1", "scoop2"],\
+    #                   ["open2", "open1", "scoop2", "scoop1"], ["open2", "open1", "scoop2", "scoop1", "cut2"],\
+    #                   ["open2", "open1", "scoop2", "scoop1", "cut2", "cut1"],\
+    #                   ["open2", "open1", "scoop2", "scoop1", "cut2", "cut1", "push2"],
+    #                   ["open2", "open1", "scoop2", "scoop1", "cut2", "cut1", "push2", "push1"]]
+    model_names = [["open2", "open1", "scoop2", "scoop1", "cut2"],\
                       ["open2", "open1", "scoop2", "scoop1", "cut2", "cut1"],\
                       ["open2", "open1", "scoop2", "scoop1", "cut2", "cut1", "push2"],
                       ["open2", "open1", "scoop2", "scoop1", "cut2", "cut1", "push2", "push1"]]
-    # model_names = [["push1"], ["push2"], ["cut1"], ["cut2"], ["scoop1"], ["scoop2"], ["open1"], ["open2"]]
-    # model_names = [["push1"]]
+
     max_runs = 5
+    max_models = 20
     rewards = {}
     for model_name in model_names:
-        try:
-            r = main(model_name, max_runs)
-            if not r:
-                break
-            else:
-                print(r)
-                rewards["_".join(model_name)] = r
-        except rospy.ROSInterruptException:
-            pass
-        print(rewards)
-        pickle.dump(rewards, open("rewards_old.pkl", "wb"))
+        for model_num in range(max_models):
+            try:
+                r = main(model_name, model_num, max_runs)
+                if not r:
+                    break
+                else:
+                    print(r)
+                    rewards["_".join(model_name)] = r
+            except rospy.ROSInterruptException:
+                pass
+            print(rewards)
+        # pickle.dump(rewards, open("rewards_old.pkl", "wb"))

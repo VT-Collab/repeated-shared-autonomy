@@ -1,9 +1,6 @@
 #!/bin/bash
 
-python train_classifier_old.py
-wait
+python collect_data.py
 find * -size -4M -type f -print0 | xargs -0 git add
-wait
-git commit -m "trained 20 class models per tasklist"
-wait 
+git commit -m "running ours with 20 models"
 git push origin main
