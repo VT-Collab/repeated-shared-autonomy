@@ -198,8 +198,7 @@ if __name__ == "__main__":
     #                   ["open2", "open1", "scoop2", "scoop1", "cut2", "cut1"],\
     #                   ["open2", "open1", "scoop2", "scoop1", "cut2", "cut1", "push2"],
     #                   ["open2", "open1", "scoop2", "scoop1", "cut2", "cut1", "push2", "push1"]]
-    model_names = [["open2", "open1", "scoop2", "scoop1", "cut2"],\
-                      ["open2", "open1", "scoop2", "scoop1", "cut2", "cut1"],\
+    model_names = [["open2", "open1", "scoop2", "scoop1", "cut2", "cut1"],\
                       ["open2", "open1", "scoop2", "scoop1", "cut2", "cut1", "push2"],
                       ["open2", "open1", "scoop2", "scoop1", "cut2", "cut1", "push2", "push1"]]
 
