@@ -210,7 +210,7 @@ class TrajectoryClient(object):
         # print(xdot)
         s_next = self.joint2pose() + xdot
         if s_next[0,2] < 0.25:
-            xdot[0,2] = 0.2 - s_next[0,2]
+            xdot[0,2] = 0.
         if s_next[0,0] > 0.45 or s_next[0,0] < -0.9:
             # print("edited x")
             xdot[0,0] = 0
@@ -226,7 +226,7 @@ class TrajectoryClient(object):
 
     def send(self, qdot):
         self.qdots.append(qdot)
-        qdot_mean = np.mean(self.qdots, axis=0).tolist()
+        qdot_mean = self.compute_limits(np.mean(self.qdots, axis=0)).tolist()
         cmd_vel = Float64MultiArray()
         cmd_vel.data = qdot_mean
         self.vel_pub.publish(cmd_vel)
