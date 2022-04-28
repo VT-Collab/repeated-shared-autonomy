@@ -226,7 +226,9 @@ class TrajectoryClient(object):
 
     def send(self, qdot):
         self.qdots.append(qdot)
-        qdot_mean = self.compute_limits(np.mean(self.qdots, axis=0)).tolist()
+        qdot_mean = self.compute_limits(np.mean(self.qdots, axis=0))
+        print(qdot_mean)
+        break
         cmd_vel = Float64MultiArray()
         cmd_vel.data = qdot_mean
         self.vel_pub.publish(cmd_vel)
