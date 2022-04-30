@@ -18,6 +18,7 @@ def plot_err():
     ours_1_1 = []
     for filename in os.listdir(folder):
         ours = pickle.load(open(folder + "/" + filename, "rb"))
+        print(ours["model"])
         if ours["model"][6:8] ==  "1_" and ours["task"] == 1:
             print(ours["model"])
             ours = np.array(ours["data"][-1][0][1]) 
