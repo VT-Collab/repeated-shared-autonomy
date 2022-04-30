@@ -198,15 +198,13 @@ if __name__ == "__main__":
     #                   ["open2", "open1", "scoop2", "scoop1", "cut2", "cut1"],\
     #                   ["open2", "open1", "scoop2", "scoop1", "cut2", "cut1", "push2"],
     #                   ["open2", "open1", "scoop2", "scoop1", "cut2", "cut1", "push2", "push1"]]
-    model_names = [["open2", "open1", "scoop2", "scoop1", "cut2", "cut1"],\
-                      ["open2", "open1", "scoop2", "scoop1", "cut2", "cut1", "push2"],
-                      ["open2", "open1", "scoop2", "scoop1", "cut2", "cut1", "push2", "push1"]]
+    model_names = [["open2", "open1", "scoop2", "scoop1", "cut2", "cut1", "push2", "push1"]]
 
     max_runs = 5
     max_models = 20
     rewards = {}
     for model_name in model_names:
-        for model_num in range(max_models):
+        for model_num in range(9, max_models):
             try:
                 r = main(model_name, model_num, max_runs)
                 if not r:
