@@ -144,9 +144,9 @@ def main(model_name, model_num, max_runs):
                         elapsed_time = curr_time - assist_time
                         data.append([elapsed_time] + [q] + [qdot_h.tolist()] + [qdot_r] + [float(alpha)] + [z] + [reward])
                         start_time = curr_time
-                        # print("model: {0} task: {1} run: {2} qdot_h:{3:2.1f} qdot_r:{4:2.1f} alpha:{5:2.1f} reward:{6:2.1f}"\
-                        #     .format("_".join(model_name), task, run, np.linalg.norm(qdot_h), np.linalg.norm(qdot_r), float(alpha),\
-                        #      float(reward)))
+                        print("model: {0} task: {1} run: {2} qdot_h:{3:2.1f} qdot_r:{4:2.1f} alpha:{5:2.1f} reward:{6:2.1f}"\
+                            .format("_".join(model_name), task, run, np.linalg.norm(qdot_h), np.linalg.norm(qdot_r), float(alpha),\
+                             float(reward)))
                         cum_reward += reward
 
                     if len(data) >= 155:

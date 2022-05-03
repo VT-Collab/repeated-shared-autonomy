@@ -209,9 +209,14 @@ class TrajectoryClient(object):
             xdot = self.qdot2xdot(qdot)
         # print(xdot)
         s_next = self.joint2pose() + xdot
-        if s_next[0,2] < 0.25:
+        if s_next[0,2] < 0.35:
+            xdot[0,3] = 0.
+            xdot[0,4] = 0.
+            xdot[0,5] = 0.
+        if s_next[0,2] <= 0.25:
+            # print("close to table")
             xdot[0,2] = 0.
-        if s_next[0,0] > 0.45 or s_next[0,0] < -0.9:
+        if s_next[0,0] > 0.45 or s_next[0,0] < -0.7:
             # print("edited x")
             xdot[0,0] = 0
         if s_next[0,1] < 0.23 or s_next[0,1] > 1.12:
@@ -227,6 +232,8 @@ class TrajectoryClient(object):
     def send(self, qdot):
         self.qdots.append(qdot)
         qdot_mean = np.mean(self.qdots, axis=0)
+        qdot_mean = self.compute_limits(qdot_mean)[0]
+        # print(qdot_mean)
         cmd_vel = Float64MultiArray()
         cmd_vel.data = qdot_mean
         self.vel_pub.publish(cmd_vel)
