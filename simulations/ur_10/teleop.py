@@ -81,6 +81,8 @@ def main():
         axes, start, mode, stop = joystick.getInput()
         q = mover.joint_states
         s = mover.joint2pose()
+
+        mover.actuate_gripper(0,1,0.5)
         # print(axes)
         if stop:
             #pickle.dump(data, open(filename, "wb"))

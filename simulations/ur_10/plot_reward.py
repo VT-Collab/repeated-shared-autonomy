@@ -26,7 +26,7 @@ def plot_reward():
     for filename in os.listdir(folder):
         if not filename[0] == "m":
             continue
-        demo = pickle.load(open(folder + "/" + filename, "rb"), encoding='latin1')
+        demo = pickle.load(open(folder + "/" + filename, "rb"))#, encoding='latin1')
         key = demo["task"]
         if key in optimal_traj:
             curr_traj = np.array([item[1] for item in demo["data"]]).reshape(1, len(demo["data"]), 6)
@@ -43,7 +43,7 @@ def plot_reward():
     for filename in os.listdir(folder):
         if filename[0] == ".":
             continue
-        ours = pickle.load(open(folder + "/" + filename, "rb"), encoding='latin1')
+        ours = pickle.load(open(folder + "/" + filename, "rb"))#, encoding='latin1')
         model_data = ours["model"].split("_")
         model = model_data[:-1]
         run = ours["run"]
@@ -56,24 +56,31 @@ def plot_reward():
         ours_alpha = np.array([item[4] for item in ours["data"]])
         if not "_".join(model) in ours_fse:
             ours_fse["_".join(model)] = np.zeros((len(model), 100))
-        # ours_fse["_".join(model)][model.index(task), (model_num)*5+run-1] = \
-        #     np.sum(np.abs(np.linalg.norm(optimal_traj[task] - ours_traj)))
         ours_fse["_".join(model)][model.index(task), (model_num)*5+run-1] = \
-            np.mean(ours_alpha)
-
+            np.sum(np.abs(np.linalg.norm(optimal_traj[task] - ours_traj)))
+        # ours_fse["_".join(model)][model.index(task), (model_num)*5+run-1] = \
+        #     np.mean(ours_alpha)
+    print("Ours")
+    ours_regret = []
+    ours_sem = []
+    for i in range(8):
+        ours_regret.append(np.mean( np.hstack( (ours_fse["_".join(tasklist[i])], ours_fse["_".join(tasklist[i+8])]) ) ))
+        ours_sem.append(np.std( np.hstack( (ours_fse["_".join(tasklist[i])], ours_fse["_".join(tasklist[i+8])]) ) )/np.sqrt(200))
+    print(ours_regret)
     for key in ours_fse:
         ours_fse[key] = [np.mean(ours_fse[key]), np.std(ours_fse[key])/np.sqrt(ours_fse[key].size)]
 
     # for i in range(8):
-    #     ours_costs = np.zeros(1,200)
+    #     ours_costs = np.zeros(len(tasklist[i]),200)
     #     ours_costs[:, :100] = ours_fse["_".join(tasklist[i])]
     #     ours_costs[:, 100:] = ours_fse["_".join(tasklist[8+i])]
+    #     ours_costs = np.mean()
     
-    folder = "runs/ensemble/"
+    folder = "runs/ensemble2/"
     for filename in os.listdir(folder):
         if filename[0] == ".":
             continue
-        ensemble = pickle.load(open(folder + "/" + filename, "rb"), encoding='latin1')
+        ensemble = pickle.load(open(folder + "/" + filename, "rb"))#, encoding='latin1')
         model = ensemble["model"].split("_")
         run = ensemble["run"]
         task = ensemble["task"]
@@ -81,41 +88,82 @@ def plot_reward():
         ensemble_alpha = np.array([item[4] for item in ensemble["data"]])
         if not "_".join(model) in ensemble_fse:
             ensemble_fse["_".join(model)] = np.zeros((len(model), 100))
-        # ensemble_fse["_".join(model)][model.index(task), run-1] = \
-        # np.sum(np.abs(np.linalg.norm(optimal_traj[task] - ensemble_traj)))
         ensemble_fse["_".join(model)][model.index(task), run-1] = \
-        np.mean(ensemble_alpha)
+        np.sum(np.abs(np.linalg.norm(optimal_traj[task] - ensemble_traj)))
+        # ensemble_fse["_".join(model)][model.index(task), run-1] = \
+        # np.mean(ensemble_alpha)
     # print(ensemble_fse["1"])
-    for key in ensemble_fse:
+    print("Ensemble")
+    ensemble_regret = []
+    ensemble_sem = []
+    for i in range(8):
+        ensemble_regret.append(np.mean(np.hstack( (ensemble_fse["_".join(tasklist[i])], ensemble_fse["_".join(tasklist[i+8])]))))
+        ensemble_sem.append(np.std(np.hstack( (ensemble_fse["_".join(tasklist[i])], ensemble_fse["_".join(tasklist[i+8])]))) / np.sqrt(200))
+    print(ensemble_regret)
+    plt.plot(np.arange(1,len(ensemble_regret)+1),ensemble_regret, label="ensemble")
+    plt.plot(np.arange(1,len(ours_regret)+1),ours_regret, label="Ours")
+    plt.fill_between(np.arange(1,9), np.array(ours_regret)-np.array(ours_sem), np.array(ours_regret)+np.array(ours_sem))
+    plt.fill_between(np.arange(1,9), np.array(ensemble_regret)-np.array(ensemble_sem), np.array(ensemble_regret)+np.array(ensemble_sem))
+    plt.show()
+    # for key in ensemble_fse:
         # ensemble_fse[key] = np.mean(np.mean(ensemble_fse[key], axis=1))
-        ensemble_fse[key] = [np.mean(ensemble_fse[key]), np.std(ensemble_fse[key])/np.sqrt(ensemble_fse[key].size)]
+        # print("key:{} cost: {}".format(key, np.mean(ensemble_fse[key])))
+        # ensemble_fse[key] = [np.mean(ensemble_fse[key]), np.std(ensemble_fse[key])/np.sqrt(ensemble_fse[key].size)]
+    # for i in range(8):
+    #     ours_costs = np.zeros(1,200)
+    #     ours_costs[:, :100] = ours_fse["_".join(tasklist[i])]
+    #     ours_costs[:, 100:] = ours_fse["_".join(tasklist[8+i])]
+    
 
 
 
-    ours_mean_err = []
-    ensemble_mean_err = []
-    # ours_sem = []
-    # ensemble_sem = []
-    for tasks in tasklist:
-        ours_mean_err.append(ours_fse["_".join(tasks)][0])
-        # ours_sem.append(ours_fse["_".join(tasks)][1])
-        ensemble_mean_err.append(ensemble_fse["_".join(tasks)][0])
-        # ensemble_sem.append(ensemble_fse["_".join(tasks)][1])
-    ours_mean_err = np.vstack((ours_mean_err[:8], ours_mean_err[8:]))
-    ours_sem = np.std(ours_mean_err, axis=0) / np.sqrt(2)
-    ours_mean_err = np.mean(ours_mean_err, axis=0)
-    ensemble_mean_err = np.vstack((ensemble_mean_err[:8], ensemble_mean_err[8:]))
-    ensemble_sem = np.std(ensemble_mean_err, axis=0) / np.sqrt(2)
-    ensemble_mean_err = np.mean(ensemble_mean_err, axis=0)
-    plt.errorbar(np.arange(1,len(ensemble_mean_err)+1),ensemble_mean_err, yerr=ensemble_sem, label="ensemble")
-    plt.errorbar(np.arange(1,len(ours_mean_err)+1),ours_mean_err, yerr=ours_sem, label="Ours")
-    plt.xlabel('# skills learned')
-    plt.ylabel('Mean cost')
-    plt.legend()
-    # plt.plot(np.arange(1,21), ours_mean_err)
+    # print("test")
+    # folder = "runs/ensemble2/"
+    # test_fse = {}
+    # for filename in os.listdir(folder):
+    #     if filename[0] == ".":
+    #         continue
+    #     ensemble = pickle.load(open(folder + "/" + filename, "rb"))#, encoding='latin1')
+    #     model = ensemble["model"].split("_")
+    #     run = ensemble["run"]
+    #     task = ensemble["task"]
+    #     test_traj = np.array([item[1] for item in ensemble["data"]])
+    #     test_alpha = np.array([item[4] for item in ensemble["data"]])
+    #     if not "_".join(model) in test_fse:
+    #         test_fse["_".join(model)] = np.zeros((len(model), 100))
+    #     test_fse["_".join(model)][model.index(task), run-1] = \
+    #     np.sum(np.abs(np.linalg.norm(optimal_traj[task] - test_traj)))
+    #     # ensemble_fse["_".join(model)][model.index(task), run-1] = \
+    #     # np.mean(ensemble_alpha)
+    # for key in test_fse:
+    #     print("key: {} cost: {}".format(key, np.mean(test_fse[key])))
+
+    # ours_mean_err = []
+    # ensemble_mean_err = []
+    # # ours_sem = []
+    # # ensemble_sem = []
+    # for tasks in tasklist:
+    #     ours_mean_err.append(ours_fse["_".join(tasks)][0])
+    #     # ours_sem.append(ours_fse["_".join(tasks)][1])
+    #     ensemble_mean_err.append(ensemble_fse["_".join(tasks)][0])
+    #     # ensemble_sem.append(ensemble_fse["_".join(tasks)][1])
+    # ours_mean_err = np.vstack((ours_mean_err[:8], ours_mean_err[8:]))
+    # ours_sem = np.std(ours_mean_err, axis=0) / np.sqrt(2)
+    # ours_mean_err = np.mean(ours_mean_err, axis=0)
+    # ensemble_mean_err = np.vstack((ensemble_mean_err[:8], ensemble_mean_err[8:]))
+    # ensemble_sem = np.std(ensemble_mean_err, axis=0) / np.sqrt(2)
+    # ensemble_mean_err = np.mean(ensemble_mean_err, axis=0)
+    # plt.errorbar(np.arange(1,len(ensemble_mean_err)+1),ensemble_mean_err, yerr=ensemble_sem, label="ensemble")
+    # plt.errorbar(np.arange(1,len(ours_mean_err)+1),ours_mean_err, yerr=ours_sem, label="Ours")
+    # plt.xlabel('# skills learned')
+    # plt.ylabel('Mean cost')
+    # plt.legend()
+    # # plt.plot(np.arange(1,21), ours_mean_err)
+    # plt.plot(np.arange(1,len(ensemble_mean_err)+1),ensemble_mean_err, label="ensemble")
+    # plt.plot(np.arange(1,len(ours_mean_err)+1),ours_mean_err, label="Ours")
     # plt.fill_between(np.arange(1,9), np.array(ours_mean_err)-np.array(ours_sem), np.array(ours_mean_err)+np.array(ours_sem))
     # plt.fill_between(np.arange(1,9), np.array(ensemble_mean_err)-np.array(ensemble_sem), np.array(ensemble_mean_err)+np.array(ensemble_sem))
-    plt.show()
+    # plt.show()
     # ensemble = np.array(ensemble["data"][-1][0][1]) 
 
     

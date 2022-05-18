@@ -209,14 +209,14 @@ class TrajectoryClient(object):
             xdot = self.qdot2xdot(qdot)
         # print(xdot)
         s_next = self.joint2pose() + xdot
-        if s_next[0,2] < 0.35:
-            xdot[0,3] = 0.
-            xdot[0,4] = 0.
-            xdot[0,5] = 0.
+        # if s_next[0,2] < 0.35:
+        #     xdot[0,3] = 0.
+        #     xdot[0,4] = 0.
+        #     xdot[0,5] = 0.
         if s_next[0,2] <= 0.25:
             # print("close to table")
             xdot[0,2] = 0.
-        if s_next[0,0] > 0.45 or s_next[0,0] < -0.7:
+        if s_next[0,0] > 0.45 or s_next[0,0] < -0.9:
             # print("edited x")
             xdot[0,0] = 0
         if s_next[0,1] < 0.23 or s_next[0,1] > 1.12:
