@@ -115,8 +115,9 @@ def train_cae():
     noisesamples = 5
 
     savename = 'data/' + 'cae.pkl'
-    # folders = ["pour", "stir", "place"]
-    folders = ["pour", "place"]
+    folders = ["pour", "stir", "place"]
+    # folders = ["pour", "place"]
+    # folders = ["stir"]
     demos = []
 
     mover = TrajectoryClient()
