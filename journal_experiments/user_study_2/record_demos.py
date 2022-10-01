@@ -142,14 +142,14 @@ def record_demo(args):
 def main():
     rospy.init_node("record_demo")
     parser = argparse.ArgumentParser()
-    parser.add_argument("--demo-num", type=int, help="demo number", default=1)
+    parser.add_argument("--name", type=str, help="save name", default="1")
     parser.add_argument("--save-loc", type=str, default="./demos", help="save location for demo")
     parser.add_argument("--store", action="store_true", help="use to store demo or discard")
     args = parser.parse_args()
     demo = record_demo(args)
     if args.store:
         rospy.loginfo("Sample Datapoint : {}".format(demo[0]))
-        pickle.dump(demo, open(args.save_loc + "/" + str(args.demo_num) + ".pkl", "wb"))
+        pickle.dump(demo, open(args.save_loc + "/" + args.name + ".pkl", "wb"))
 
 if __name__ == "__main__":
         try:

@@ -53,8 +53,6 @@ from geometry_msgs.msg import(
 )
 
 
-from train_classifier import Net
-from train_cae import CAE
 from waypoints import HOME
 
 STEP_SIZE_L = 0.15
@@ -212,8 +210,10 @@ class TrajectoryClient(object):
         xyz = xyz = np.asarray(xyz_lin[-1]).tolist() + np.asarray(xyz_ang).tolist()
         return xyz
 
-    def pose2joint(self, pose):
-        return self.kdl_kin.inverse(pose, self.joint_states)
+    def pose2joint(self, pose, guess=None):
+        if guess is None:
+            guess = self.joint_states
+        return self.kdl_kin.inverse(pose, guess, maxiter=1000)
 
     def qdot2xdot(self, qdot):
         J = self.kdl_kin.jacobian(self.joint_states)
@@ -277,82 +277,6 @@ class TrajectoryClient(object):
         Robotiq.goto(self.robotiq_client, pos=pos, speed=speed, force=force, block=True)
         return self.robotiq_client.get_result()
 
-class Model(object):
-
-    def __init__(self, classifier_name, cae_name):
-        self.class_net = Net()
-        self.cae_net = CAE()
-        
-        model_dict = torch.load(classifier_name, map_location='cpu')
-        self.class_net.load_state_dict(model_dict)
-        
-        model_dict = torch.load(cae_name, map_location='cpu')
-        self.cae_net.load_state_dict(model_dict)
-
-        self.class_net.eval
-        self.cae_net.eval
-
-    def classify(self, c):
-        labels = self.class_net.classify(torch.FloatTensor(c))
-        # print(labels)
-        confidence = F.softmax(labels[0], dim=0)
-        return confidence.data[0].numpy()
-        # return labels.detach().numpy()
-
-    def encoder(self, c):
-        z_mean_tensor = self.cae_net.encoder(torch.FloatTensor(c))
-        return z_mean_tensor.tolist()
-
-    def decoder(self, z, s):
-        z_tensor = torch.FloatTensor(z + s)
-        a_predicted = self.cae_net.decoder(z_tensor)
-        return a_predicted.data.numpy()
-
-# GRU model
-# class Model(object):
-
-#     def __init__(self, classifier_name):#, cae_name):
-#         self.class_net = Net()
-#         # self.cae_net = CAE()
-        
-#         model_dict = torch.load(classifier_name, map_location='cpu')
-#         self.class_net.load_state_dict(model_dict)
-        
-#         # model_dict = torch.load(cae_name, map_location='cpu')
-#         # self.cae_net.load_state_dict(model_dict)
-
-#         self.class_net.eval
-#         # self.cae_net.eval
-
-#     def classify(self, c):
-#         label = self.class_net.classify(c)
-#         return label.data.numpy()
-
-    # def encoder(self, c):
-    #     z_mean_tensor = self.cae_net.encoder(torch.FloatTensor(c))
-    #     return z_mean_tensor.tolist()
-
-    # def decoder(self, z, s):
-    #     z_tensor = torch.FloatTensor(z + s)
-    #     a_predicted = self.cae_net.decoder(z_tensor)
-    #     return a_predicted.data.numpy()
-
-# def deform(xi, start, length, tau):
-#     xi1 = copy.deepcopy(np.asarray(xi))
-#     A = np.zeros((length+2, length))
-#     for idx in range(length):
-#         A[idx, idx] = 1
-#         A[idx+1,idx] = -2
-#         A[idx+2,idx] = 1
-#     R = np.linalg.inv(np.dot(A.T, A))
-#     U = np.zeros(length)
-#     gamma = np.zeros((length, 6))
-#     for idx in range(6):
-#         U[0] = tau[idx]
-#         gamma[:,idx] = np.dot(R, U)
-#     end = min([start+length, xi1.shape[0]-1])
-#     xi1[start:end,:] += gamma[0:end-start,:]
-#     return xi1
 
 def go2home():
     mover = TrajectoryClient()

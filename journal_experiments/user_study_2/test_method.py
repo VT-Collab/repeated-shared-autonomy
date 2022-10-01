@@ -1,13 +1,29 @@
 # Standard imports
 import rospy, actionlib, copy
-import sys, time, pygame, pickle, tf
+import sys, time, pygame, pickle, tf, math
 import numpy as np
 
 
 # Imports from current directory
-from utils import TrajectoryClient, JoystickControl, Model
+from utils import TrajectoryClient, JoystickControl
+from model_utils import Model
 from waypoints import HOME
 
+np.set_printoptions(precision=2)
+def get_rotation_mat(euler):
+    R_x = np.mat([[1, 0, 0],
+                  [0, np.cos(euler[0]), -np.sin(euler[0])],
+                  [0, np.sin(euler[0]), np.cos(euler[0])]])
+
+    R_y = np.mat([[np.cos(euler[1]), 0, np.sin(euler[1])],
+                  [0, 1, 0],
+                  [-np.sin(euler[1]), 0, np.cos([1])]])
+
+    R_z = np.mat([[np.cos(euler[2]), -np.sin(euler[2]), 0],
+                  [np.sin(euler[2]), np.cos(euler[2]), 0],
+                  [0, 0, 1]])
+    R = R_x * R_y * R_z
+    return R
 def run_test():
 
     mover = TrajectoryClient()
@@ -137,24 +153,63 @@ def run_test():
             alpha = model.classify([d.tolist()])
             # alpha = model.classify([start_pos + s])
             # alpha = model.classify([s])
-            print(alpha)
+            # print(alpha)
             alpha = min(alpha, 0.6)
             if alpha < 0.28:
                 alpha = 0.
             alphas.append(alpha)
             alpha = 0.4
             # z = model.encoder(start_pos + [0.0] + curr_pos + [curr_gripper_pos] + [float(trans_mode), float(slow_mode)])
-            z = model.encoder(prev_pos + [0.] + curr_pos + [curr_gripper_pos] + [float(trans_mode), float(slow_mode)])
-            z = model.encoder(prev_pos + [0.] + curr_pos + [curr_gripper_pos] + [float(trans_mode), float(slow_mode)])
-            a_robot = model.decoder(z, curr_pos + [curr_gripper_pos] + [float(trans_mode), float(slow_mode)])
+            # history = noise_q + noise_pos + curr_gripper_pos + trans_mode + slow_mode
+            # for i, ang in enumerate(curr_pos[3:]):
+            #     ang = math.fmod(ang, np.pi)
+            #     if ang < 0:
+            #         ang += np.pi
+            #     if ang < 0.15:
+            #         ang += np.pi
+            #     curr_pos[3+i] = ang
+            # print(curr_pos[3:])
+            curr_pos_awrap = np.zeros(9)
+            curr_pos_awrap[:3] = curr_pos[:3]
+            curr_pos_awrap[3:] = get_rotation_mat(curr_pos[3:]).flatten('F')[0,:6]
+            # for i in range(3):
+            #     curr_pos_awrap[3+i] = np.sin(curr_pos[3+i])
+            #     curr_pos_awrap[6+i] = np.cos(curr_pos[3+i])
+                
+            z = model.encoder(q + curr_pos_awrap.tolist() + [curr_gripper_pos] + [float(trans_mode), float(slow_mode)])
+            a_robot = model.decoder(z, q + curr_pos_awrap.tolist() + [curr_gripper_pos] + [float(trans_mode), float(slow_mode)])
+            # print(np.array(q))
+            # z = model.encoder(q + [curr_gripper_pos] + [float(trans_mode), float(slow_mode)])
+            # a_robot = model.decoder(z, q + [curr_gripper_pos] + [float(trans_mode), float(slow_mode)])
+            # R = np.mat([[1, 0, 0],
+            #             [0, 1, 0],
+            #             [0, 0, 1]])
+            # P = np.array([0, 0, -0.10])
+            # P_hat = np.mat([[0, -P[2], P[1]],
+            #                 [P[2], 0, -P[0]],
+            #                 [-P[1], P[0], 0]])
+                
+            # a_robot_trans = np.array(a_robot[:3])[np.newaxis]
+            # a_robot_rot = np.array(a_robot[3:])[np.newaxis]
+            # trans_vel = scaling_trans * R * a_robot_trans.T + scaling_rot * P_hat * R * a_robot_rot.T
+            # rot_vel = scaling_rot * R * a_robot_rot.T
+            # xdot_r = np.zeros(6)
+            # xdot_r[:3] = trans_vel.T[:]
+            # xdot_r[3:] = rot_vel.T[:]
             # a_robot[4] = -a_robot[4]
             # print(a_robot[3:])
             # a_robot[3:6] = np.zeros(3)
             # xdot_r = np.zeros(6)
             # xdot_r[:3] = a_robot[:3]
-            # xdot_r[3:] = tf.transformations.euler_from_quaternion(a_robot[3:7])
-            a_robot = mover.xdot2qdot(a_robot[:6])
+            # for i in range(3):
+            #     xdot_r[3+i] = np.arctan2(a_robot[3+i], a_robot[6+i])
+            # print(xdot_r[3:])
+            # a_robot = mover.xdot2qdot(xdot_r)
             # xdot_r = mover.xdot2qdot(xdot_r)
+            # a_robot[:3] = -a_robot[:3]
+            # if not trans_mode:
+            #     print("pos: {}, ac: {}".format(np.array(curr_pos), a_robot))
+            a_robot = mover.xdot2qdot(a_robot)
             qdot_r = 2. * a_robot
             # qdot_r = 1 * xdot_r
             qdot_r = qdot_r.tolist()[0]
