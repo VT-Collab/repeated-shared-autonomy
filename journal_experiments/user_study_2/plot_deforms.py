@@ -12,7 +12,7 @@ def main():
     # axs[0] = fig.gca(projection='3d')
     # axs[1] = fig.gca(projection='3d')
 
-    folders = ['demos/pour', 'demos/place']
+    folders = ['demos/pour', 'demos/place', 'demos/stir']
     deformed_trajs = pickle.load(open("deformed_trajs.pkl", "rb"))
     for folder in folders:
         for filename in os.listdir(folder):

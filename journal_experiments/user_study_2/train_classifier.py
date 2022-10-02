@@ -159,7 +159,7 @@ def train_classifier():
     true_cnt = 0
     false_cnt = 0
     savename = 'data/' + 'class.pkl'
-    folders = ["place", "pour"]
+    folders = ["place", "pour", "stir"]
     for folder in folders:
         demos = glob(parent_folder + "/" + folder + "/*.pkl")
         for filename in demos:
