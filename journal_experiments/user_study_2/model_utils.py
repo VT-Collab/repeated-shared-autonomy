@@ -46,7 +46,7 @@ class Model(object):
     def classify(self, c):
         labels = self.class_net.classify(torch.FloatTensor(c))
         # print(labels)
-        confidence = F.softmax(labels[0], dim=0)
+        confidence = F.softmax(labels, dim=0)
         return confidence.data[0].numpy()
         # return labels.detach().numpy()
 

@@ -198,8 +198,10 @@ class TrajectoryClient(object):
     def reset_gripper(self):
         Robotiq.goto(self.robotiq_client, pos=1, speed=1, force=0, block=True)
 
-    def joint2pose(self):
-        state = self.kdl_kin.forward(self.joint_states)
+    def joint2pose(self, q = None):
+        if q is None:
+            q = self.joint_states
+        state = self.kdl_kin.forward(q)
         xyz_lin = np.array(state[:,3][:3]).T
         xyz_lin = xyz_lin.tolist()
         R = state[:,:3][:3]

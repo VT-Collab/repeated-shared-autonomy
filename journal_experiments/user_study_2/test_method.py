@@ -9,7 +9,7 @@ from utils import TrajectoryClient, JoystickControl
 from model_utils import Model
 from waypoints import HOME
 
-np.set_printoptions(precision=2)
+np.set_printoptions(precision=2,suppress=True)
 def get_rotation_mat(euler):
     R_x = np.mat([[1, 0, 0],
                   [0, np.cos(euler[0]), -np.sin(euler[0])],
@@ -149,16 +149,8 @@ def run_test():
                     axes, gripper, mode, slow, start = joystick.getInput()
 
             # print(t)
-            d = np.array(start_pos + [0.] + curr_pos +[curr_gripper_pos] + xdot_h.tolist() + [gripper_ac])
-            alpha = model.classify([d.tolist()])
-            # alpha = model.classify([start_pos + s])
-            # alpha = model.classify([s])
-            # print(alpha)
-            alpha = min(alpha, 0.6)
-            if alpha < 0.28:
-                alpha = 0.
-            alphas.append(alpha)
-            alpha = 0.4
+            # d = np.array(start_pos + [0.] + curr_pos +[curr_gripper_pos] + xdot_h.tolist() + [gripper_ac])
+
             # z = model.encoder(start_pos + [0.0] + curr_pos + [curr_gripper_pos] + [float(trans_mode), float(slow_mode)])
             # history = noise_q + noise_pos + curr_gripper_pos + trans_mode + slow_mode
             # for i, ang in enumerate(curr_pos[3:]):
@@ -168,14 +160,23 @@ def run_test():
             #     if ang < 0.15:
             #         ang += np.pi
             #     curr_pos[3+i] = ang
-            # print(curr_pos[3:])
+            # print(np.array(curr_pos[:3]))
             curr_pos_awrap = np.zeros(9)
             curr_pos_awrap[:3] = curr_pos[:3]
             curr_pos_awrap[3:] = get_rotation_mat(curr_pos[3:]).flatten('F')[0,:6]
             # for i in range(3):
             #     curr_pos_awrap[3+i] = np.sin(curr_pos[3+i])
             #     curr_pos_awrap[6+i] = np.cos(curr_pos[3+i])
-                
+            d = q + curr_pos_awrap.tolist()
+            alpha = model.classify(d)
+            # alpha = model.classify([start_pos + s])
+            # alpha = model.classify([s])
+            print(alpha)
+            alpha = min(alpha, 0.6)
+            # if alpha < 0.28:
+            #     alpha = 0.
+            alphas.append(alpha)
+            # alpha = 0.4
             z = model.encoder(q + curr_pos_awrap.tolist() + [curr_gripper_pos] + [float(trans_mode), float(slow_mode)])
             a_robot = model.decoder(z, q + curr_pos_awrap.tolist() + [curr_gripper_pos] + [float(trans_mode), float(slow_mode)])
             # print(np.array(q))
