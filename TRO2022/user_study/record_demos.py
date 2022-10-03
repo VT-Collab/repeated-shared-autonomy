@@ -102,6 +102,9 @@ def record_demo(args):
             if slow_mode:
                 scaling_trans = 0.1
                 scaling_rot = 0.2
+            else:
+                scaling_trans = 0.2
+                scaling_rot = 0.4
 
             # Get input velocities for robot            
             if trans_mode: 

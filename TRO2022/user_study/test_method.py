@@ -4,7 +4,7 @@ import sys, time, pickle, argparse
 import numpy as np
 
 # Imports from current directory
-from utils import TrajectoryClient, JoystickControl, get_rotation_mat
+from utils import TrajectoryClient, JoystickControl, convert_to_6d
 from model_utils import Model
 
 np.set_printoptions(precision=2, suppress=True)
@@ -16,33 +16,40 @@ def run_test(args):
 
     rate = rospy.Rate(1000)
 
+    cae_model = 'models/' + args.cae_name
+    class_model = 'models/' + args.class_name
+    model = Model(class_model, cae_model)
+
     rospy.loginfo("Initialized, Moving Home")
     mover.go_home()
     mover.reset_gripper()
     rospy.loginfo("Reached Home, waiting for start")
 
-    cae_model = 'models/' + args.cae_name
-    class_model = 'models/' + args.class_name
-    model = Model(class_model, cae_model)
-
-    traj = []
-    step_time = 0.1
-    trans_mode = True
-    slow_mode = False
-    scaling_trans = 0.2
-    scaling_rot = 0.4
     start_pos = None
+    start_q = None
     while start_pos is None:
         start_pos = mover.joint2pose()
+        start_q = mover.joint_states
+
     start_gripper_pos = None
     while start_gripper_pos is None:
         start_gripper_pos = mover.robotiq_joint_state
-    start_time = time.time()
-    alphas = []
-    assist = False
-    assist_start = 1.0
+
+    step_time = 0.1
     start_time = time.time()
     assist_time = time.time()
+
+    scaling_trans = 0.2
+    scaling_rot = 0.4
+
+    trans_mode = True
+    slow_mode = False
+    traj = []
+    alphas = []
+    
+    assist = False
+    assist_start = 1.0
+    
     while not rospy.is_shutdown():
 
         q = np.asarray(mover.joint_states).tolist()
@@ -55,6 +62,7 @@ def run_test(args):
             mover.switch_controller(mode='position')
             mover.send_joint(q, 1.0)
             return 1
+            
         # switch between translation and rotation
         if mode:
             trans_mode = not trans_mode
@@ -105,28 +113,29 @@ def run_test(args):
             start_time = curr_time
 
         if traj:
+
             gripper_ac = 0
             if gripper and (mover.robotiq_joint_state > 0):
                 mover.actuate_gripper(gripper_ac, 1, 0.)
                 while gripper:
                     axes, gripper, mode, slow, start = joystick.getInput()
+
             elif gripper and (mover.robotiq_joint_state == 0):
                 gripper_ac = 1
                 mover.actuate_gripper(gripper_ac, 1, 0)
                 while gripper:
                     axes, gripper, mode, slow, start = joystick.getInput()
 
-            curr_pos_awrap = np.zeros(9)
-            curr_pos_awrap[:3] = curr_pos[:3]
-            curr_pos_awrap[3:] = get_rotation_mat(curr_pos[3:]).flatten('F')[0,:6]
+            curr_pos_awrap = convert_to_6d(curr_pos)
 
             d = q + curr_pos_awrap.tolist()
             alpha = model.classify(d)
 
-            print(alpha)
+            rospy.loginfo("confidence: {}".format(alpha))
             alpha = min(alpha, 0.6)
             alphas.append(alpha)
             # alpha = 0.4
+
             z = model.encoder(q + curr_pos_awrap.tolist() + [curr_gripper_pos] + [float(trans_mode), float(slow_mode)])
             a_robot = model.decoder(z, q + curr_pos_awrap.tolist() + [curr_gripper_pos] + [float(trans_mode), float(slow_mode)])
 

@@ -7,7 +7,8 @@ import pickle
 
 """
 TODO
--  Convert to polar plots for angles
+- Convert to polar plots for angles
+- Pass task as an argument
 """
 
 def main():
