@@ -7,7 +7,7 @@ import numpy as np
 from utils import TrajectoryClient, JoystickControl, get_rotation_mat
 from model_utils import Model
 
-np.set_printoptions(precision=2,suppress=True)
+np.set_printoptions(precision=2, suppress=True)
 
 def run_test(args):
 
@@ -152,8 +152,8 @@ def main():
     rospy.init_node("test_method_old")
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--cae_name", type=str, help="cae model name", default="cae")
-    parser.add_argument("--class_name", type=str, help="class model name", default="class")
+    parser.add_argument("--cae-name", type=str, help="cae model name", default="cae")
+    parser.add_argument("--class-name", type=str, help="class model name", default="class")
     args = parser.parse_args()
     
     run_test(args)

@@ -1,20 +1,12 @@
 #!/usr/bin/env python
 import rospy
 import actionlib
-import sys
-import time
 import numpy as np
 import pygame
 import pickle
 from urdf_parser_py.urdf import URDF
 from pykdl_utils.kdl_kinematics import KDLKinematics
-import copy, os
 from collections import deque
-import torch
-import torch.nn as nn
-import torch.optim as optim
-import torch.nn.functional as F
-from torch.utils.data import Dataset, DataLoader
 from std_msgs.msg import Float64MultiArray, String
 
 from robotiq_2f_gripper_msgs.msg import (
@@ -52,8 +44,13 @@ from geometry_msgs.msg import(
     Twist
 )
 
-
 from waypoints import HOME
+
+"""
+TODO
+- Clean up global variables
+- Get active controller before switching
+"""
 
 STEP_SIZE_L = 0.15
 STEP_SIZE_A = 0.2 * np.pi / 4
@@ -187,13 +184,22 @@ class TrajectoryClient(object):
         res = self.switch_controller_cli.call(req)
 
     def go_home(self):
-        dist = np.linalg.norm(np.array(HOME) - np.array(self.joint_states))
-        if dist > 0.01:
-            self.switch_controller(mode='position')
-            self.send_joint(HOME, 5.0)
-            self.client.wait_for_result()
-        self.switch_controller(mode='velocity')
-        return True
+        # Sometimes going home fails because joint_states are None
+        while True:
+            try:
+                if np.linalg.norm(np.array(HOME) - np.array(self.joint_states)) > 0.01:
+                    if np.linalg.norm(np.array(HOME) - np.array(self.joint_states)) < 1.5:
+                        time = 5.
+                    else:
+                        time = 8.
+                    self.switch_controller(mode='position')
+                    self.send_joint(HOME, time)
+                    self.client.wait_for_result()
+                self.switch_controller(mode='velocity')
+            except:
+                continue
+            break
+        return True  
 
     def reset_gripper(self):
         Robotiq.goto(self.robotiq_client, pos=1, speed=1, force=0, block=True)
@@ -274,12 +280,32 @@ class TrajectoryClient(object):
         rospy.sleep(time)
 
     def actuate_gripper(self, pos, speed, force):
-        # Need to invert when sending commands. For Robotiq.goto pos=1 -> close and pos=0 -> open
+        # Need to invert when sending commands. 
+        # For Robotiq.goto pos=1 -> close and pos=0 -> open
         pos = 1 - pos
         Robotiq.goto(self.robotiq_client, pos=pos, speed=speed, force=force, block=True)
         return self.robotiq_client.get_result()
 
+def deform(xi, start, length, tau):
+    # length += np.random.choice(np.arange(30, length))
+    xi1 = np.asarray(xi).copy()
+    A = np.zeros((length+2, length))
+    for idx in range(length):
+        A[idx, idx] = 1
+        A[idx+1,idx] = -2
+        A[idx+2,idx] = 1
+    R = np.linalg.inv(np.dot(A.T, A))
+    U = np.zeros(length)
+    gamma = np.zeros((length, 6))
+    for idx in range(6):
+        U[0] = tau[idx]
+        gamma[:,idx] = np.dot(R, U)
+    end = min([start+length, xi1.shape[0]-1])
+    xi1[start:end+1,:] += gamma[0:end-start+1,:]
+    return xi1
+
 def get_rotation_mat(euler):
+    
     R_x = np.mat([[1, 0, 0],
                   [0, np.cos(euler[0]), -np.sin(euler[0])],
                   [0, np.sin(euler[0]), np.cos(euler[0])]])
@@ -294,52 +320,8 @@ def get_rotation_mat(euler):
     R = R_x * R_y * R_z
     return R
 
-def go2home():
-    mover = TrajectoryClient()
-    # Sometime going home fails because joint_states are None
-    while True:
-        try:
-            if np.linalg.norm(np.array(HOME) - np.array(mover.joint_states)) > 0.01:
-                if np.linalg.norm(np.array(HOME) - np.array(mover.joint_states)) < 1.5:
-                    time = 5.
-                else:
-                    time = 8.
-                mover.switch_controller(mode='position')
-                mover.send_joint(HOME, time)
-                mover.client.wait_for_result()
-            mover.switch_controller(mode='velocity')
-        except:
-            continue
-        break
-    return True    
-
-def compute_optimal_rewards():
-    optimal_rewards = {}
-    folder = "demos"
-    for filename in os.listdir(folder):
-        if not filename[-3:] == "pkl":
-            continue
-        task = filename.split("_")[0]
-
-        data = pickle.load(open(folder + "/" + filename, "rb"))
-        if data:
-            cum_reward = sum([item[2] for item in data])
-        else:
-            print("{} has no data".format(filename))
-        if task in optimal_rewards:
-            optimal_rewards[task].append(cum_reward)    
-        else:
-            optimal_rewards[task] = [cum_reward]
-
-    for task in optimal_rewards:
-        optimal_rewards[task] = float(np.mean(optimal_rewards[task]))
-    pickle.dump(optimal_rewards, open("optimal_rewards.pkl", "wb"))
-
-def get_human_action(goal, state):
-    noiselevel = 0.05
-    action = (goal - state) * 0.5 + np.random.normal(0, noiselevel, len(goal))
-    action = np.clip(action, -0.3, 0.3)
-    return action
-
-def compute_reward(goal, state):
-    return -np.linalg.norm(goal-state)
+def convert_to_6d(pos):
+    pos_awrap = np.zeros(9)
+    pos_awrap[:3] = pos[:3]
+    pos_awrap[3:] = get_rotation_mat(pos[3:]).flatten('F')[0,:6]
+    return pos_awrap

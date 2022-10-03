@@ -13,7 +13,8 @@ TODO
 def main():
     fig, axs = plt.subplots(2,1,subplot_kw=dict(projection='3d'))
 
-    folders = ['demos/pour', 'demos/place', 'demos/stir']
+    # folders = ['demos/pour', 'demos/place', 'demos/stir']
+    folders = ['demos/place']
     deformed_trajs = pickle.load(open("data/deformed_trajs.pkl", "rb"))
     for folder in folders:
         for filename in os.listdir(folder):
