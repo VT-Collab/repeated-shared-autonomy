@@ -1,0 +1,12 @@
+# folders
+models/
+data/
+
+# compiles
+__pycache__/
+*.pyc
+.vscode
+.DS_Store
+
+plot_data.pkl
+
