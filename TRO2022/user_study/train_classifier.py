@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader
-# import torch.nn.functional as F
 import pickle, random, argparse
 import numpy as np
 import sys, rospy
@@ -84,8 +83,8 @@ def train_classifier(args):
     folders = folders[:args.n_tasks]
     rospy.loginfo("Using demos for tasks : {}".format(folders))
 
-    data_folder = 'data/'
-    model_folder = 'models/'
+    data_folder = 'data'
+    model_folder = 'models'
     savename = 'class_' + "_".join(folders)
     
     true_cnt = 0
@@ -150,7 +149,6 @@ def train_classifier(args):
                 # cartesian position based deformations
                 deform_len = len(traj)
                 start = 0
-                # tau = np.random.uniform([-0.05, -0.02, -0.05, -0.05, -0.05, -0.05], [0.0, 0.05, 0.05, 0.05, 0.05, 0.05])
                 tau = np.random.uniform([-0.05, -0.02, -0.05, -0.05, -0.05, -0.05], [0.0, 0.05, 0.05, 0.05, 0.05, 0.05])
 
                 snip_deformed = deform(traj_pos, start, deform_len, tau)
@@ -184,7 +182,7 @@ def train_classifier(args):
 
     rospy.loginfo("Real waypoints: {} deformations: {}".format(true_cnt, false_cnt))
     # save deformations for plotting
-    pickle.dump(deformed_trajs, open(data_folder + "/""deformed_trajs.pkl", "wb"))
+    pickle.dump(deformed_trajs, open(data_folder + "/" +"deformed_trajs.pkl", "wb"))
     pickle.dump(dataset, open(data_folder + "/" + savename + ".pkl", "wb"))
     
     model = Net().to(device)
