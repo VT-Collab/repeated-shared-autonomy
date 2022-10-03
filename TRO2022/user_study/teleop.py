@@ -1,22 +1,9 @@
-#!/usr/bin/env python
-
 import rospy
-import actionlib
 import sys
-import time
 import numpy as np
-import pygame
-from urdf_parser_py.urdf import URDF
 
-from journal_experiments.user_study_2.Waypoints import HOME, TASKSET 
-
-STEP_SIZE_L = 0.15
-STEP_SIZE_A = 0.2 * np.pi / 4
-STEP_TIME = 0.01
-DEADBAND = 0.1
-MOVING_AVERAGE = 100
-
-from utils import TrajectoryClient, JoystickControl, go2home
+from waypoints import HOME
+from utils import TrajectoryClient, JoystickControl
 
 def main():
     rospy.init_node("teleop")
@@ -25,38 +12,78 @@ def main():
     mover = TrajectoryClient()
     joystick = JoystickControl()
 
-    start_time = time.time()
     rate = rospy.Rate(1000)
 
-    print("[*] Initialized, Moving Home")
-    mover.switch_controller(mode='position')
-    if np.linalg.norm(np.array(HOME) - np.array(mover.joint_states)) > 0.01:
-        mover.switch_controller(mode='position')
-        mover.send_joint(HOME, 5.0)
-        mover.client.wait_for_result()
-    mover.switch_controller(mode='velocity')
-    print("[*] Ready for joystick inputs")
+    rospy.loginfo("Initialized, Moving Home")
+    mover.go_home()
+    mover.reset_gripper()
+    rospy.loginfo("Reached Home, waiting for start")
+
+    trans_mode = True
+    slow_mode = False
+    scaling_trans = 0.2
+    scaling_rot = 0.4
 
     while not rospy.is_shutdown():
-        t_curr = time.time() - start_time
-        axes, start, mode, stop = joystick.getInput()
-        q = mover.joint_states
-        s = mover.joint2pose()
+        axes, gripper, mode, slow, start = joystick.getInput()
 
-        mover.actuate_gripper(1,1,0.5)
-        print("gripper: {}".format(mover.robotiq_joint_state))
-        # print(axes)
-        if stop:
-            #pickle.dump(data, open(filename, "wb"))
+        # Toggling the gripper
+        gripper_ac = 0
+        if gripper and (mover.robotiq_joint_state > 0):
+            mover.actuate_gripper(gripper_ac, 1, 0.)
+            while gripper:
+                axes, gripper, mode, slow, start = joystick.getInput()
+        elif gripper and (mover.robotiq_joint_state == 0):
+            gripper_ac = 1
+            mover.actuate_gripper(gripper_ac, 1, 0)
+            while gripper:
+                axes, gripper, mode, slow, start = joystick.getInput()
+
+        # End teleop
+        if start:
             return True
       
-        xdot_h = np.zeros(6)
+        # switch between translation and rotation
         if mode:
-            xdot_h[3:] = scaling_trans * np.asarray(axes)
-            # print(xdot_h)
+            trans_mode = not trans_mode
+            rospy.loginfo("Translation Mode: {}".format(trans_mode))
+            while mode:
+                axes, gripper, mode, slow, start = joystick.getInput()
+        
+        # Toggle speed of robot
+        if slow:
+            slow_mode = not slow_mode
+            rospy.loginfo("Slow Mode: {}".format(trans_mode))
+            while slow:
+                axes, gripper, mode, slow, start = joystick.getInput()
+
+        # Slow down robot when X pressed
+        if slow_mode:
+            scaling_trans = 0.1
+            scaling_rot = 0.2
         else:
+            scaling_trans = 0.2
+            scaling_rot = 0.4
+
+        xdot_h = np.zeros(6)
+        if trans_mode: 
             xdot_h[:3] = scaling_trans * np.asarray(axes)
-        # print(xdot_h)
+
+        elif not trans_mode:
+            # change coord frame from robotiq gripper to tool flange
+            R = np.mat([[1, 0, 0],
+                        [0, 1, 0],
+                        [0, 0, 1]])
+            P = np.array([0, 0, -0.10])
+            P_hat = np.mat([[0, -P[2], P[1]],
+                            [P[2], 0, -P[0]],
+                            [-P[1], P[0], 0]])
+            
+            axes = np.array(axes)[np.newaxis]
+            trans_vel = scaling_rot * P_hat * R * axes.T
+            rot_vel = scaling_rot * R * axes.T
+            xdot_h[:3] = trans_vel.T[:]
+            xdot_h[3:] = rot_vel.T[:]
             
         qdot_h = mover.xdot2qdot(xdot_h)
         qdot_h = qdot_h.tolist()

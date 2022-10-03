@@ -99,6 +99,7 @@ def record_demo(args):
             
             if trans_mode: 
                 xdot_h[:3] = scaling_trans * np.asarray(axes)
+
             elif not trans_mode:
                 # change coord frame from robotiq gripper to tool flange
                 R = np.mat([[1, 0, 0],
@@ -129,7 +130,6 @@ def record_demo(args):
                 data["xdot_h"] = xdot_h.tolist()
                 data["gripper_ac"] = gripper_ac
                 demo.append(data)
-                # demo.append([start_pos, [start_gripper_pos], curr_pos, [curr_gripper_pos], [float(trans_mode)], [float(slow_mode)], xdot_h.tolist(), [gripper_ac]])
                 start_time = curr_time
 
         qdot_h = mover.xdot2qdot(xdot_h)

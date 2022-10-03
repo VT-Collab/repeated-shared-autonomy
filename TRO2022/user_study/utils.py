@@ -279,6 +279,20 @@ class TrajectoryClient(object):
         Robotiq.goto(self.robotiq_client, pos=pos, speed=speed, force=force, block=True)
         return self.robotiq_client.get_result()
 
+def get_rotation_mat(euler):
+    R_x = np.mat([[1, 0, 0],
+                  [0, np.cos(euler[0]), -np.sin(euler[0])],
+                  [0, np.sin(euler[0]), np.cos(euler[0])]])
+
+    R_y = np.mat([[np.cos(euler[1]), 0, np.sin(euler[1])],
+                  [0, 1, 0],
+                  [-np.sin(euler[1]), 0, np.cos([1])]])
+
+    R_z = np.mat([[np.cos(euler[2]), -np.sin(euler[2]), 0],
+                  [np.sin(euler[2]), np.cos(euler[2]), 0],
+                  [0, 0, 1]])
+    R = R_x * R_y * R_z
+    return R
 
 def go2home():
     mover = TrajectoryClient()
