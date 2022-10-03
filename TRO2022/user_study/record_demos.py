@@ -2,10 +2,14 @@
 import rospy
 import sys, time, pickle
 import numpy as np
-from urdf_parser_py.urdf import URDF
 import argparse
 
 from utils import TrajectoryClient, JoystickControl
+
+"""
+TODO
+- instantiate final rotation(R, P, P_hat) outside the loop
+"""
 
 def record_demo(args):
 
@@ -18,23 +22,27 @@ def record_demo(args):
     mover.go_home()
     mover.reset_gripper()
     rospy.loginfo("Reached Home, waiting for start")
-
-    demo = []
-    record = False
-    step_time = 0.1
-    trans_mode = True
-    slow_mode = False
-    scaling_trans = 0.2
-    scaling_rot = 0.4
     
     start_pos = None
+    start_q = None
     while start_pos is None:
         start_pos = mover.joint2pose()
         start_q = mover.joint_states
+
     start_gripper_pos = None
     while start_gripper_pos is None:
         start_gripper_pos = mover.robotiq_joint_state
+
+    step_time = 0.1
     start_time = time.time()
+
+    scaling_trans = 0.2
+    scaling_rot = 0.4
+
+    record = False
+    trans_mode = True
+    slow_mode = False
+    demo = []
 
     while not rospy.is_shutdown():
 
@@ -46,6 +54,7 @@ def record_demo(args):
         axes, gripper, mode, slow, start = joystick.getInput()
 
         if record and start:
+            rospy.loginfo("Trajectory recorded")
             rospy.loginfo("Datapoints in trajectory: {}".format(len(demo)))
             mover.switch_controller(mode='position')
             mover.send_joint(q, 1.0)
@@ -93,10 +102,8 @@ def record_demo(args):
             if slow_mode:
                 scaling_trans = 0.1
                 scaling_rot = 0.2
-            else:
-                scaling_trans = 0.2
-                scaling_rot = 0.4
-            
+
+            # Get input velocities for robot            
             if trans_mode: 
                 xdot_h[:3] = scaling_trans * np.asarray(axes)
 
@@ -116,6 +123,7 @@ def record_demo(args):
                 xdot_h[:3] = trans_vel.T[:]
                 xdot_h[3:] = rot_vel.T[:]
 
+            # Save waypoint
             if curr_time - start_time >= step_time:
                 # rospy.loginfo("State : {}".format(curr_pos))
                 data = {}
@@ -134,22 +142,32 @@ def record_demo(args):
 
         qdot_h = mover.xdot2qdot(xdot_h)
         qdot_h = qdot_h.tolist()
-
         qdot_h = mover.compute_limits(qdot_h[0])
+
         mover.send(qdot_h[0])
         rate.sleep()
 
 def main():
     rospy.init_node("record_demo")
     parser = argparse.ArgumentParser()
-    parser.add_argument("--name", type=str, help="save name", default="1")
+    parser.add_argument("--name", type=str, help="save name")
     parser.add_argument("--save-loc", type=str, default="./demos", help="save location for demo")
     parser.add_argument("--store", action="store_true", help="use to store demo or discard")
     args = parser.parse_args()
-    demo = record_demo(args)
+    
     if args.store:
+        assert args.name is not None, "Please enter a valid name to save the demo"
+
+    demo = record_demo(args)
+
+    if args.store:
+        savename  = args.save_loc + "/" + args.name + ".pkl"
+        pickle.dump(demo, open(savename, "wb"))
+        rospy.loginfo("Saved demo as: {}".format(savename))
         rospy.loginfo("Sample Datapoint : {}".format(demo[0]))
-        pickle.dump(demo, open(args.save_loc + "/" + args.name + ".pkl", "wb"))
+    
+    else:
+        rospy.loginfo("Demo not saved.")
 
 if __name__ == "__main__":
         try:

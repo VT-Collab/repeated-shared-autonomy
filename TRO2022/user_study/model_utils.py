@@ -1,12 +1,9 @@
-#!/usr/bin/env python
 import numpy as np
 import torch
 import torch.nn.functional as F
 
 from train_classifier import Net
 from train_cae import CAE
-from waypoints import HOME
-
 
 class Model(object):
 
@@ -25,7 +22,6 @@ class Model(object):
 
     def classify(self, c):
         labels = self.class_net.classify(torch.FloatTensor(c))
-        # print(labels)
         confidence = F.softmax(labels, dim=0)
         return confidence.data[0].numpy()
         # return labels.detach().numpy()

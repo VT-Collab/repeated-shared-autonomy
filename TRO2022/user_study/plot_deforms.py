@@ -5,13 +5,16 @@ import matplotlib.pyplot as plt
 import os
 import pickle
 
-def main():
-    mpl.rcParams['legend.fontsize'] = 10
+"""
+TODO
+-  Convert to polar plots for angles
+"""
 
+def main():
     fig, axs = plt.subplots(2,1,subplot_kw=dict(projection='3d'))
 
     folders = ['demos/pour', 'demos/place', 'demos/stir']
-    deformed_trajs = pickle.load(open("deformed_trajs.pkl", "rb"))
+    deformed_trajs = pickle.load(open("data/deformed_trajs.pkl", "rb"))
     for folder in folders:
         for filename in os.listdir(folder):
             demo = pickle.load(open(folder + "/" + filename, "rb"))
