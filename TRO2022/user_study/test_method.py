@@ -48,7 +48,7 @@ def run_test(args):
     alphas = []
     
     assist = False
-    assist_start = 2.0
+    assist_start = 1.0
     
     while not rospy.is_shutdown():
 
@@ -133,20 +133,13 @@ def run_test(args):
 
             rospy.loginfo("confidence: {}".format(alpha))
             alpha = min(alpha, 0.6)
-            # if alpha < 0.3:
-            #     alpha = 0 
             alphas.append(alpha)
-            if args.cae_only:
-                alpha = 0.4
+            # alpha = 0.4
 
             z = model.encoder(q + curr_pos_awrap.tolist() + [curr_gripper_pos] + [float(trans_mode), float(slow_mode)])
             a_robot = model.decoder(z, q + curr_pos_awrap.tolist() + [curr_gripper_pos] + [float(trans_mode), float(slow_mode)])
-            
-            if args.class_only:
-                a_robot = np.zeros(6)
 
             a_robot = mover.xdot2qdot(a_robot)
-
             qdot_r = 2. * a_robot
             qdot_r = qdot_r.tolist()[0]
 
@@ -170,8 +163,6 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--cae-name", type=str, help="cae model name", default="cae")
     parser.add_argument("--class-name", type=str, help="class model name", default="class")
-    parser.add_argument("--class-only", action="store_true", help="Use only classifier")
-    parser.add_argument("--cae-only", action="store_true", help="Use only cae")
     args = parser.parse_args()
     
     run_test(args)
