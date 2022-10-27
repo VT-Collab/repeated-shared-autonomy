@@ -10,8 +10,8 @@ class CostNN(nn.Module):
         super(CostNN, self).__init__()
         self.net = nn.Sequential(
             nn.Linear(state_dim, hidden_dim1),
-            nn.ReLU(),
-            nn.Linear(hidden_dim1, hidden_dim1),
+            # nn.ReLU(),
+            # nn.Linear(hidden_dim1, hidden_dim1),
             nn.ReLU(),
             nn.Linear(hidden_dim1, out_features),
         )

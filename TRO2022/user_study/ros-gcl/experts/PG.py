@@ -1,27 +1,56 @@
+import sys
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from itertools import product
+import rospy
+from scipy import stats
 
 class PG(nn.Module):
 
     def generate_lookup_table(self, action_space_dim, values=[-1, 0, 1]):
         return np.array(list(product(values, repeat=action_space_dim)))
+    
+    def temp_table(self):
+        return [[0, 0, 0, 1, 0, 1],
+                [0, 0, 1, 1, 0, 1],
+                [0, 0, -1, 1, 0, 1]]
 
-    def __init__(self, state_shape, n_actions, v = np.linspace(-1, 1, num=1)):
-        super().__init__()
+    def one_trans_per_step(self):
+        return [[0, 0, 0, 1, 0, 1],
+                [1, 0, 0, 1, 0, 1],
+                [0, 1, 0, 1, 0, 1],
+                [0, 0, 1, 1, 0, 1],
+                [-1, 0, 0, 1, 0, 1],
+                [0, -1, 0, 1, 0, 1],
+                [0, 0, -1, 1, 0, 1],]
+
+    def generate_robot_action_table(self, axisValues=[-1, 0, 1]):
+        a = []
+        possibleAxes = list(product(axisValues, repeat=3))
+        # possibleLogics = [[0, 0, 1], [1, 0, 1]]
+        possibleLogics = [[1, 0, 1]]
+        # possibleLogics = list(product([0], repeat=3))
+        for z in possibleAxes:
+            for y in possibleLogics:
+                a.append(list(z) + list(y))
+        return np.array(a)
+
+    def __init__(self, state_shape, n_actions, v = [-1, 0, 1]):
+        super(PG, self).__init__()
         self.state_shape = state_shape
-        self.action_table = self.generate_lookup_table(n_actions, values=v)
+        # self.action_table = self.generate_robot_action_table(axisValues=v)
+        self.action_table = self.one_trans_per_step()
         self.n_actions = n_actions
         self.output_space = len(self.action_table)
         self.model = nn.Sequential(
             nn.Linear(in_features = state_shape[0], out_features = 128),
             nn.ReLU(),
             # nn.Linear(in_features = 64 , out_features = self.output_space)
-            nn.Linear(in_features = 128 , out_features = 128),
+            nn.Linear(in_features = 128 , out_features = 64), 
             nn.ReLU(),
-            nn.Linear(in_features = 128 , out_features = self.output_space)
+            nn.Linear(in_features = 64 , out_features = self.output_space)
         )
         self.optimizer = torch.optim.Adam(self.model.parameters(), 1e-3)
     def forward(self, x):
@@ -36,7 +65,7 @@ class PG(nn.Module):
         # print(states, logits, probs)
         return probs
     
-    def generate_session(self, env, t_max=1000):
+    def generate_session(self, env, t_max=100):
         states, traj_probs, actions, rewards = [], [], [], []
         s = env.reset()
         q_t = 1.0
@@ -48,6 +77,7 @@ class PG(nn.Module):
             action_probs = self.predict_probs(np.array([s]))[0]
             a_choice = np.random.choice(self.output_space,  p = action_probs)
             a = self.action_table[a_choice]
+            print(a_choice)
             if oldGym:
                 # need to change action to a float
                 a = list(a)
@@ -65,29 +95,39 @@ class PG(nn.Module):
             s = new_s
             if done:
                 break
-
         return states, actions, rewards, traj_probs 
 
     def generate_real_session(self, robot_interface, t_max=1000):
         states, traj_probs, actions = [], [], []
         s = robot_interface.getState()
         q_t = 1.0
-
+        stalled = False
+        done = False
         for t in range(t_max):
+
+            if done and not stalled: # outside of boundaries
+                stalled = True
+                # for some reason this wasn't working well
+                STALL_LEN = 300 # should be sufficient
+                for i in range(STALL_LEN):
+                    robot_interface.applyAction([0, 0, 0, 1, 0, 1])
+
             action_probs = self.predict_probs(np.array([s]))[0]
             a_choice = np.random.choice(self.output_space,  p = action_probs)
             a = self.action_table[a_choice]
-            new_s, done = robot_interface.applyAction(a)
-            q_t *= action_probs[a_choice]
+            if not stalled:
+                new_s, done = robot_interface.applyAction(a)
+            # if stalled:
 
+            #     robot_interface.applyAction([0, 0, 0, 1, 0, 1])
+            
+            q_t *= action_probs[a_choice]
             states.append(s)
             traj_probs.append(q_t)
             actions.append(a_choice)
 
             s = new_s
-            if done:
-                break
-
+        robot_interface.goHome()
         return states, actions, traj_probs 
 
     def _get_cumulative_rewards(self, rewards, gamma=0.99):

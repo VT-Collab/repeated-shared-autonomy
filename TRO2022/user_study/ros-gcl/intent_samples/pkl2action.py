@@ -1,23 +1,27 @@
 import pickle
+import glob
 import numpy as np 
-
+from itertools import product
 # note that the action space can be condensed to (axes, trans_mode, gripper_ac, slow_mode)
 # axes is a (1,3)
+def generate_robot_action_table(axisValues=[-1, 0, 1]):
+    a = []
+    possibleAxes = list(product(axisValues, repeat=3))
+    possibleLogics = [[1, 0, 1]]
+    # possibleLogics = list(product([0], repeat=3))
+    for z in possibleAxes:
+        for y in possibleLogics:
+            a.append(list(z) + list(y))
+    return np.array(a)
 
-
-# # recall this   R = np.mat([[1, 0, 0],
-#                             [0, 1, 0],
-#                             [0, 0, 1]])
-#                 P = np.array([0, 0, -0.10])
-#                 P_hat = np.mat([[0, -P[2], P[1]],
-#                                 [P[2], 0, -P[0]],
-#                                 [-P[1], P[0], 0]])
-                
-#                 axes = np.array(axes)[np.newaxis]
-#                 trans_vel = scaling_rot * P_hat * R * axes.T
-#                 rot_vel = scaling_rot * R * axes.T
-#                 xdot_h[:3] = trans_vel.T[:]
-#                 xdot_h[3:] = rot_vel.T[:]
+def simpleTable():
+    return np.array([[0, 0, 0, 1, 0, 1],
+            [1, 0, 0, 1, 0, 1],
+            [0, 1, 0, 1, 0, 1],
+            [0, 0, 1, 1, 0, 1],
+            [-1, 0, 0, 1, 0, 1],
+            [0, -1, 0, 1, 0, 1],
+            [0, 0, -1, 1, 0, 1],])
 
 def getAction(entry):
     axes = [0, 0, 0]
@@ -28,20 +32,44 @@ def getAction(entry):
         axes = entry["xdot_h"][:3]
         # scaling is done, now scale from
         # [-1, -0.5, 0, 0.5, 1] for each input, rounding in intervals of 0.5
-        axes = [0.5 * round(2 * ax/trans_scaling) for ax in axes]
+        # axes = [0.5 * round(2 * ax/trans_scaling) for ax in axes]
+        axes = [round(np.sign(ax) * min(abs(ax/trans_scaling), 1.0)) for ax in axes]
     else: 
         # need to convert coordinate frames 
         axes = entry["xdot_h"][3:]
-        axes = [0.5 * round(2 * ax/rot_scaling) for ax in axes]
-    
-    return axes
+        # axes = [0.5 * round(2 * ax/rot_scaling) for ax in axes]
+        axes = [round(np.sign(ax) * min(abs(ax/rot_scaling), 1.0)) for ax in axes]
+  
+    # action = {"axes": axes, "trans_mode": entry["trans_mode"], 
+    #     "gripper_ac": int(entry["gripper_ac"]), "slow_mode": slow_mode}
+    action = axes + [int(entry["trans_mode"])] + [int(entry["gripper_ac"])] + [1]
+    return action
 
-def main(fname="intent0/place_1.pkl"):
+def getState(x):
+    return x["curr_pos"] + list(x["curr_q"])
+
+def indexOf(t, x):
+    for idx, y in enumerate(t):
+        if (x==y).all():
+            return idx
+    return 0
+    # return indexOf(t, [0, 0, 0, 1, 0, 1])
+
+def main(fname="downward/downward10.pkl"):
     data = pickle.load(open(fname, "rb"))
+    newdata = []
+    t = simpleTable()
     for x in data:
-        print(getAction(x), x["xdot_h"])
-
+        action = getAction(x)
+        actionIDX = indexOf(t, action)
+        newdata.append((getState(x), actionIDX))
+    return newdata 
 
 if __name__ == "__main__":
-    main()
+    files = glob.glob("intent0/*.pkl")
+    newdata = []
+    for f in files:
+        newdata += main(f)
+    fname = "intent0/all"
+    pickle.dump(newdata, open(fname+"_actions_simple.pkl", "w"))
 
