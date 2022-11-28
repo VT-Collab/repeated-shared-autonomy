@@ -1,3 +1,9 @@
+END1 = [0.4409816563129425, -1.3135612646686, -1.551652733479635, -1.920682732258932, 1.4868240356445312, 2.016606092453003]
+END2 = [0.3971351385116577, -1.2446196714984339, -1.8191035429583948, -1.7183736006366175, 1.4836620092391968, 1.9727555513381958]
+END3 = [0.5832183361053467, -0.9510038534747522, -1.9657209555255335, -1.880350414906637, 1.4980816841125488, 2.1588282585144043]
+
+TASK = [END1, END2, END3]
+
 import rospy
 import sys
 import numpy as np
@@ -24,7 +30,10 @@ def main():
     scaling_trans = 0.2
     scaling_rot = 0.4
 
+    goal_idx = 0
     while not rospy.is_shutdown():
+        q = np.asarray(mover.joint_states).tolist()
+
         axes, gripper, mode, slow, start = joystick.getInput()
 
         # Toggling the gripper
@@ -41,6 +50,7 @@ def main():
 
         # End teleop
         if start:
+            mover.stop()
             return True
       
         # switch between translation and rotation
@@ -57,41 +67,24 @@ def main():
             while slow:
                 axes, gripper, mode, slow, start = joystick.getInput()
 
-        # Slow down robot when X pressed
-        if slow_mode:
-            scaling_trans = 0.1
-            scaling_rot = 0.2
-        else:
-            scaling_trans = 0.2
-            scaling_rot = 0.4
+        goal= np.array(TASK[goal_idx])
+        q = np.array(q)
+        qdot_h = 0.2 * (goal - q)
+        if np.linalg.norm(goal - q) < 0.1:
+            if goal_idx < len(TASK)-1:
+                    goal_idx += 1
+            else:
+                goal_idx = 0
 
-        xdot_h = np.zeros(6)
-        if trans_mode: 
-            xdot_h[:3] = scaling_trans * np.asarray(axes)
-
-        elif not trans_mode:
-            # change coord frame from robotiq gripper to tool flange
-            R = np.mat([[1, 0, 0],
-                        [0, 1, 0],
-                        [0, 0, 1]])
-            P = np.array([0, 0, -0.10])
-            P_hat = np.mat([[0, -P[2], P[1]],
-                            [P[2], 0, -P[0]],
-                            [-P[1], P[0], 0]])
+        
             
-            axes = np.array(axes)[np.newaxis]
-            trans_vel = scaling_rot * P_hat * R * axes.T
-            rot_vel = scaling_rot * R * axes.T
-            xdot_h[:3] = trans_vel.T[:]
-            xdot_h[3:] = rot_vel.T[:]
-            
-        qdot_h = mover.xdot2qdot(xdot_h)
+        # qdot_h = mover.xdot2qdot(xdot_h)
         qdot_h = qdot_h.tolist()
         
         qdot_h = mover.compute_limits(qdot_h)
         mover.send(qdot_h[0])
         rate.sleep()
-        rospy.loginfo(mover.joint2pose())
+        # rospy.loginfo(mover.joint2pose())
 
 if __name__ == "__main__":
     try:

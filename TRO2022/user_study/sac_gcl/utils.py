@@ -1,5 +1,6 @@
-#!/usr/bin/env python
+import math
 import rospy
+import torch
 import actionlib
 import numpy as np
 import pygame
@@ -8,6 +9,7 @@ from urdf_parser_py.urdf import URDF
 from pykdl_utils.kdl_kinematics import KDLKinematics
 from collections import deque
 from std_msgs.msg import Float64MultiArray, String
+
 
 from robotiq_2f_gripper_msgs.msg import (
     CommandRobotiqGripperFeedback, 
@@ -19,7 +21,6 @@ from robotiq_2f_gripper_msgs.msg import (
 from robotiq_2f_gripper_control.robotiq_2f_gripper_driver import (
     Robotiq2FingerGripperDriver as Robotiq
 )
-
 from controller_manager_msgs.srv import (
     SwitchController, 
     SwitchControllerRequest, 
@@ -310,6 +311,7 @@ class TrajectoryClient(object):
         Robotiq.goto(self.robotiq_client, pos=pos, speed=speed, force=force, block=True)
         return self.robotiq_client.get_result()
 
+
 def deform(xi, start, length, tau):
     # length += np.random.choice(np.arange(30, length))
     xi1 = np.asarray(xi).copy()
@@ -349,3 +351,46 @@ def convert_to_6d(pos):
     pos_awrap[:3] = pos[:3]
     pos_awrap[3:] = get_rotation_mat(pos[3:]).flatten('F')[0,:6]
     return pos_awrap
+
+
+def get_cumulative_rewards(rewards, gamma=0.99):
+    G = np.zeros_like(rewards, dtype=float)
+    G[-1] = rewards[-1]
+    for idx in range(-2, -len(rewards)-1, -1):
+        G[idx] = rewards[idx] + gamma * G[idx+1]
+    return G
+
+
+def to_one_hot(y_tensor, ndims):
+    y_tensor = y_tensor.type(torch.LongTensor).view(-1, 1)
+    y_one_hot = torch.zeros(
+        y_tensor.size()[0], ndims).scatter_(1, y_tensor, 1)
+    return y_one_hot
+
+
+
+def create_log_gaussian(mean, log_std, t):
+    quadratic = -((0.5 * (t - mean) / (log_std.exp())).pow(2))
+    l = mean.shape
+    log_z = log_std
+    z = l[-1] * math.log(2 * math.pi)
+    log_p = quadratic.sum(dim=-1) - log_z.sum(dim=-1) - 0.5 * z
+    return log_p
+
+def logsumexp(inputs, dim=None, keepdim=False):
+    if dim is None:
+        inputs = inputs.view(-1)
+        dim = 0
+    s, _ = torch.max(inputs, dim=dim, keepdim=True)
+    outputs = s + (inputs - s).exp().sum(dim=dim, keepdim=True).log()
+    if not keepdim:
+        outputs = outputs.squeeze(dim)
+    return outputs
+
+def soft_update(target, source, tau):
+    for target_param, param in zip(target.parameters(), source.parameters()):
+        target_param.data.copy_(target_param.data * (1.0 - tau) + param.data * tau)
+
+def hard_update(target, source):
+    for target_param, param in zip(target.parameters(), source.parameters()):
+        target_param.data.copy_(param.data)

@@ -1,12 +1,19 @@
 # folders
 models/
 data/
+plots/
 
 # compiles
 __pycache__/
+*.egg-info/
 *.pyc
 .vscode
 .DS_Store
 
+# logs
+events.out.tfevents.*
+
+# some specific files
 plot_data.pkl
+waypoints.py
 

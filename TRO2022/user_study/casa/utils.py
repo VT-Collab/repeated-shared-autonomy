@@ -23,10 +23,7 @@ from robotiq_2f_gripper_control.robotiq_2f_gripper_driver import (
 from controller_manager_msgs.srv import (
     SwitchController, 
     SwitchControllerRequest, 
-    SwitchControllerResponse,
-    ListControllers,
-    ListControllersRequest,
-    ListControllersResponse
+    SwitchControllerResponse
 )
 
 from control_msgs.msg import (
@@ -121,8 +118,6 @@ class TrajectoryClient(object):
         # service call to switch controllers
         self.switch_controller_cli = rospy.ServiceProxy('/controller_manager/switch_controller',\
                  SwitchController)
-        self.list_controller_cli = rospy.ServiceProxy('/controller_manager/list_controllers',\
-                 ListControllers)
         self.joint_names = ["shoulder_pan_joint", "shoulder_lift_joint", "elbow_joint",\
                             "wrist_1_joint", "wrist_2_joint", "wrist_3_joint"]
         self.base_link = "base_link"
@@ -175,28 +170,13 @@ class TrajectoryClient(object):
 
         req.start_asap = False
         req.timeout = 0.0
-        
-        # get list of controllers
-        list_req = ListControllersRequest()
-        controller_list = ListControllersResponse()
-        controller_list = self.list_controller_cli(list_req)
-        for controller in controller_list.controller:
-            if controller.name == "joint_group_vel_controller":
-                vel_controller_state = controller.state
-            elif controller.name == "scaled_pos_joint_traj_controller":
-                pos_controller_state= controller.state
-
         if mode == 'velocity':
-            if not vel_controller_state == "running":
-                req.start_controllers = ['joint_group_vel_controller']
-            if not pos_controller_state == "stopped":
-                req.stop_controllers = ['scaled_pos_joint_traj_controller']
+            req.start_controllers = ['joint_group_vel_controller']
+            req.stop_controllers = ['scaled_pos_joint_traj_controller']
             req.strictness = req.STRICT
         elif mode == 'position':
-            if not pos_controller_state == "running":
-                req.start_controllers = ['scaled_pos_joint_traj_controller']
-            if not vel_controller_state == "stopped":
-                req.stop_controllers = ['joint_group_vel_controller']
+            req.start_controllers = ['scaled_pos_joint_traj_controller']
+            req.stop_controllers = ['joint_group_vel_controller']
             req.strictness = req.STRICT
         else:
             rospy.logwarn('Unkown mode for the controller!')
@@ -298,10 +278,6 @@ class TrajectoryClient(object):
         goal.trajectory.header.stamp = rospy.Time.now()
         self.client.send_goal(goal)
         rospy.sleep(time)
-
-    def stop(self):
-        self.switch_controller(mode='position')
-        self.send_joint(self.joint_states, 0.5)
 
     def actuate_gripper(self, pos, speed, force):
         # Need to invert when sending commands. 

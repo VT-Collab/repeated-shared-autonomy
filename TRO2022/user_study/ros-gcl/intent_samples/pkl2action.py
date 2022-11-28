@@ -26,23 +26,26 @@ def simpleTable():
 def getAction(entry):
     axes = [0, 0, 0]
     slow_mode = int(entry["slow_mode"])
-    trans_scaling = 0.1 + 0.1*slow_mode
-    rot_scaling = 0.2 + 0.2*slow_mode
-    if entry["trans_mode"]:
-        axes = entry["xdot_h"][:3]
-        # scaling is done, now scale from
-        # [-1, -0.5, 0, 0.5, 1] for each input, rounding in intervals of 0.5
-        # axes = [0.5 * round(2 * ax/trans_scaling) for ax in axes]
-        axes = [round(np.sign(ax) * min(abs(ax/trans_scaling), 1.0)) for ax in axes]
-    else: 
-        # need to convert coordinate frames 
-        axes = entry["xdot_h"][3:]
-        # axes = [0.5 * round(2 * ax/rot_scaling) for ax in axes]
-        axes = [round(np.sign(ax) * min(abs(ax/rot_scaling), 1.0)) for ax in axes]
+    trans_scaling = 0.2 - 0.1*slow_mode
+    rot_scaling = 0.4 - 0.2*slow_mode
+    # if entry["trans_mode"]:
+    axes = entry["xdot_h"][:3]
+    # scaling is done, now scale from
+    # [-1, -0.5, 0, 0.5, 1] for each input, rounding in intervals of 0.5
+    # axes = [0.5 * round(2 * ax/trans_scaling) for ax in axes]
+    axes = [ax/ trans_scaling for ax in axes]
+    # else: 
+    #     # need to convert coordinate frames 
+    #     axes = entry["xdot_h"][3:]
+    #     # axes = [0.5 * round(2 * ax/rot_scaling) for ax in axes]
+    #     axes = [ax / rot_scaling for ax in axes]
   
     # action = {"axes": axes, "trans_mode": entry["trans_mode"], 
     #     "gripper_ac": int(entry["gripper_ac"]), "slow_mode": slow_mode}
-    action = axes + [int(entry["trans_mode"])] + [int(entry["gripper_ac"])] + [1]
+    # also need rotation about the x axis == roll 
+    # note that we do not care about pitch or yaw
+    roll = entry["xdot_h"][3] / rot_scaling
+    action = axes + [roll] + [int(entry["trans_mode"])] + [int(entry["gripper_ac"])] + [1]
     return action
 
 def getState(x):
@@ -64,12 +67,22 @@ def main(fname="downward/downward10.pkl"):
         actionIDX = indexOf(t, action)
         newdata.append((getState(x), actionIDX))
     return newdata 
-
 if __name__ == "__main__":
-    files = glob.glob("intent0/*.pkl")
-    newdata = []
-    for f in files:
-        newdata += main(f)
-    fname = "intent0/all"
-    pickle.dump(newdata, open(fname+"_actions_simple.pkl", "w"))
+    strs = ["intent1", "intent2", "intent0"]
+    for s in strs:
+        files = glob.glob("{}/*.pkl".format(s))
+        newdata = []
+        for f in files:
+            data = pickle.load(open(f, "rb"))
+            last = data[-1]
+            lastState = getState(last)
+            for i in range(len(data) - 1):
+                x = data[i]
+                action = getAction(x)
+                state = getState(x)
+                newdata.append((state, action, [0], getState(data[i+1]), [0]))
+                # newdata.append([action, state, 0, getState(data[i+1]), 0])
+        fname = "{}/all".format(s)
+        print(newdata)
+        pickle.dump(newdata, open(fname+"_actions_sac.pkl", "wb"))
 
