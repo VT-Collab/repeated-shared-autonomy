@@ -26,12 +26,12 @@ def convertAction(action, mover, slow_mode=True):
     xdot_h = np.zeros(6)
     xdot_h[:3] = scaling_trans * np.asarray(axes)
     xdot_h[3] = scaling_rot * roll
-        
-    qdot_h = mover.xdot2qdot(xdot_h)
-    qdot_h = qdot_h.tolist()
+    return xdot_h        
+    # qdot_h = mover.xdot2qdot(xdot_h)
+    # qdot_h = qdot_h.tolist()
     
-    qdot_h = mover.compute_limits(qdot_h)
-    return np.transpose(qdot_h)
+    # qdot_h = mover.compute_limits(qdot_h)
+    # return np.transpose(qdot_h)
 
 
 def run_test(args):

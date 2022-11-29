@@ -1,6 +1,6 @@
 # Standard imports
 import rospy
-import sys, time, pickle, argparse
+import os, time, pickle, argparse
 import numpy as np
 
 # Imports from current directory
@@ -20,14 +20,10 @@ def run_test(args):
 
     rate = rospy.Rate(1000)
 
-
-
     # get savenames and print savenames
     # Create model based on runtype
 
-    cae_model = 'models/' + args.cae_name
-    class_model = 'models/' + args.class_name
-    model = Model(class_model, cae_model)
+    model = Model(args)
 
     rospy.loginfo("Initialized, Moving Home")
     mover.go_home()
@@ -54,11 +50,18 @@ def run_test(args):
     trans_mode = True
     slow_mode = False
     traj = []
-    alphas = []
     
     assist = False
     assist_start = 1.0
+
+    run_start = False
     
+    folder = "./data/user" + str(args.user)
+    abs_path = os.path.abspath(folder)
+    if not os.path.exists(abs_path):
+        os.makedirs(abs_path)
+
+    savename = folder + "/" + args.filename + "_" + str(args.run_num) + ".pkl" 
     while not rospy.is_shutdown():
 
         q = np.asarray(mover.joint_states).tolist()
@@ -66,8 +69,20 @@ def run_test(args):
         curr_gripper_pos = mover.robotiq_joint_state
 
         axes, gripper, mode, slow, start = joystick.getInput()
+
+        # Wait for human to start moving
+        while np.sum(np.abs(axes)) < 1e-3 and not run_start:
+            axes, gripper, mode, slow, start = joystick.getInput()
+            start_time = time.time()
+            assist_time = time.time()
+        
+        if not run_start:
+            rospy.loginfo("Start received")
+            run_start = True
+
         if start:
-            # pickle.dump(demonstration, open(filename, "wb"))
+            pickle.dump(traj, open(savename, "wb"))
+            rospy.loginfo("Collected {} datapoints and saved at {}".format(len(traj), savename))
             mover.switch_controller(mode='position')
             mover.send_joint(q, 1.0)
             return 1
@@ -114,46 +129,42 @@ def run_test(args):
         qdot_h = mover.xdot2qdot(xdot_h)
         qdot_h = qdot_h.tolist()[0]
 
-        qdot_r = np.zeros(6).tolist()
+        qdot_r = [0] * 6
 
+        gripper_ac = 0
+        if gripper and (mover.robotiq_joint_state > 0):
+            mover.actuate_gripper(gripper_ac, 1, 0.)
+            while gripper:
+                axes, gripper, mode, slow, start = joystick.getInput()
+
+        elif gripper and (mover.robotiq_joint_state == 0):
+            gripper_ac = 1
+            mover.actuate_gripper(gripper_ac, 1, 0)
+            while gripper:
+                axes, gripper, mode, slow, start = joystick.getInput()
+
+        curr_pos_awrap = convert_to_6d(curr_pos)
+
+        data = {}
+        data["q"] = q
+        data["curr_pos_awrap"] = curr_pos_awrap.tolist()
+        data["trans_mode"] = trans_mode
+        data["slow_mode"] = slow_mode
+        data["curr_gripper_pos"] = curr_gripper_pos
+
+        alpha, a_robot = model.get_params(data)
+
+        data["alpha"] = alpha
+        data["a_human"] = xdot_h.tolist()
+        data["a_robot"] = a_robot.tolist()
+
+        a_robot = mover.xdot2qdot(a_robot)
+        qdot_r = 2. * a_robot
+        qdot_r = qdot_r.tolist()[0]
+        
         curr_time = time.time()
-        if curr_time - start_time >= step_time:
-            traj.append(start_pos + curr_pos + qdot_h)
-            start_time = curr_time
-
-        if traj:
-
-            gripper_ac = 0
-            if gripper and (mover.robotiq_joint_state > 0):
-                mover.actuate_gripper(gripper_ac, 1, 0.)
-                while gripper:
-                    axes, gripper, mode, slow, start = joystick.getInput()
-
-            elif gripper and (mover.robotiq_joint_state == 0):
-                gripper_ac = 1
-                mover.actuate_gripper(gripper_ac, 1, 0)
-                while gripper:
-                    axes, gripper, mode, slow, start = joystick.getInput()
-
-            curr_pos_awrap = convert_to_6d(curr_pos)
-
-            d = q + curr_pos_awrap.tolist()
-            alpha = model.classify(d)
-
-            rospy.loginfo("confidence: {}".format(alpha))
-            alpha = min(alpha, 0.6)
-            alphas.append(alpha)
-            # alpha = 0.4
-
-            z = model.encoder(q + curr_pos_awrap.tolist() + [curr_gripper_pos] + [float(trans_mode), float(slow_mode)])
-            a_robot = model.decoder(z, q + curr_pos_awrap.tolist() + [curr_gripper_pos] + [float(trans_mode), float(slow_mode)])
-
-            a_robot = mover.xdot2qdot(a_robot)
-            qdot_r = 2. * a_robot
-            qdot_r = qdot_r.tolist()[0]
-
         if curr_time - assist_time >= assist_start and not assist:
-            print("Assistance Started...")
+            rospy.loginfo("Assistance started")
             assist = True
 
         if assist:
@@ -162,8 +173,15 @@ def run_test(args):
             qdot = qdot.tolist()
         else:
             qdot = qdot_h
-
+        
+        data["curr_time"] = curr_time
+        data["assist"] = assist
         mover.send(qdot)
+
+        if curr_time - start_time >= step_time:
+            traj.append(data)
+            start_time = curr_time
+        
         rate.sleep()
 
 def main():
@@ -172,7 +190,9 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--n-intents", type=int, help="Number of intents for the model for the robot (default: 1)", default=1)
     parser.add_argument("--user", type=int, help="User number for data collections (default: 0)", default=0)
-    parser.add_argument("--savename", type=str, help="Savename for data (default:0)", default="test")
+    parser.add_argument("--filename", type=str, help="Savename for data (default:test)", default="test")
+    parser.add_argument("--run-num", type=int, help="run number to save data (default:0)", default=0)
+    parser.add_argument("--method", type=str, help="method to use (default:ours)", default="ours")
     args = parser.parse_args()
     
     run_test(args)
