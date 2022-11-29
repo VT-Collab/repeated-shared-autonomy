@@ -2,16 +2,37 @@
 import rospy
 import sys, time, pickle, argparse
 import numpy as np
+from sac_gcl.gcl import GCL
+import torch
 
 # Imports from current directory
 from utils import TrajectoryClient, JoystickControl, convert_to_6d
-from model_utils import Model
+from glob import glob
+# from model_utils import Model
 
 np.set_printoptions(precision=2, suppress=True)
 
-""" TODO
-- Add event logging
-"""
+def convertAction(action, mover, slow_mode=True):
+    axes = action[0:3]
+    roll = action[3]
+    trans_mode = action[4]
+    gripper = action[5]
+    # slow_mode = action[6]
+
+    gripper_ac = 0
+    scaling_trans = 0.2 - 0.1*slow_mode 
+    scaling_rot = 0.4 - 0.2*slow_mode 
+    
+    xdot_h = np.zeros(6)
+    xdot_h[:3] = scaling_trans * np.asarray(axes)
+    xdot_h[3] = scaling_rot * roll
+        
+    qdot_h = mover.xdot2qdot(xdot_h)
+    qdot_h = qdot_h.tolist()
+    
+    qdot_h = mover.compute_limits(qdot_h)
+    return np.transpose(qdot_h)
+
 
 def run_test(args):
 
@@ -19,15 +40,22 @@ def run_test(args):
     joystick = JoystickControl()
 
     rate = rospy.Rate(1000)
+    models = []
+    filenames = ["intent0/sac_gcl_FINAL_intent0.pt", "intent1/sac_gcl_FINAL_intent1.pt","intent2/sac_gcl_FINAL_intent2.pt",]
+    # for i in range(1, 40):
+    #     i = 5 * i
+    #     filenames.append("intent0/sac_gcl_{}intent0.pt".format(i))
+    #     filenames.append("intent1/sac_gcl_{}intent1.pt".format(i))
+    #     filenames.append("intent2/sac_gcl_{}intent2.pt".format(i))
+    # for i in range(args.models_to_load):
 
+    # for i in range(len(filenames)):    
+    for i in range(args.num_intents):
 
-
-    # get savenames and print savenames
-    # Create model based on runtype
-
-    cae_model = 'models/' + args.cae_name
-    class_model = 'models/' + args.class_name
-    model = Model(class_model, cae_model)
+        tmp = GCL()
+        tmp.load_model_filename(filenames[i])
+        models.append(tmp) 
+    
 
     rospy.loginfo("Initialized, Moving Home")
     mover.go_home()
@@ -137,16 +165,21 @@ def run_test(args):
 
             curr_pos_awrap = convert_to_6d(curr_pos)
 
-            d = q + curr_pos_awrap.tolist()
-            alpha = model.classify(d)
-
-            rospy.loginfo("confidence: {}".format(alpha))
-            alpha = min(alpha, 0.6)
-            alphas.append(alpha)
+            d = curr_pos_awrap.tolist()[:6] + q
+            alphas = [model.cost_f(torch.FloatTensor(d)).detach().numpy()[0] for model in models]
+            # rospy.loginfo("d: {}".format(d))
+            rospy.loginfo("confidence: {}".format(alphas))
+            modelToUse = models[alphas.index(min(alphas))]
+            alpha = min(0.6, np.exp(min(alphas)))
+            alpha = max(0.0, alpha)
+            a_robot = modelToUse.select_action(d)
+            # alpha = min(alpha, 0.6)
+            # alphas.append(alpha)
             # alpha = 0.4
-
-            z = model.encoder(q + curr_pos_awrap.tolist() + [curr_gripper_pos] + [float(trans_mode), float(slow_mode)])
-            a_robot = model.decoder(z, q + curr_pos_awrap.tolist() + [curr_gripper_pos] + [float(trans_mode), float(slow_mode)])
+            a_robot = np.concatenate((a_robot, [1, 0, 1]))
+            a_robot = convertAction(a_robot, mover)
+            # z = model.encoder(q + curr_pos_awrap.tolist() + [curr_gripper_pos] + [float(trans_mode), float(slow_mode)])
+            # a_robot = model.decoder(z, q + curr_pos_awrap.tolist() + [curr_gripper_pos] + [float(trans_mode), float(slow_mode)])
 
             a_robot = mover.xdot2qdot(a_robot)
             qdot_r = 2. * a_robot
@@ -167,12 +200,11 @@ def run_test(args):
         rate.sleep()
 
 def main():
-    rospy.init_node("run")
+    rospy.init_node("test_method_old")
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--n-intents", type=int, help="Number of intents for the model for the robot (default: 1)", default=1)
-    parser.add_argument("--user", type=int, help="User number for data collections (default: 0)", default=0)
-    parser.add_argument("--savename", type=str, help="Savename for data (default:0)", default="test")
+    # parser.add_argument("--models-to-load", type=int, help="cae model name", default=3)
+    parser.add_argument("--num_intents", type=int, help="number of intents to use", default=3)
     args = parser.parse_args()
     
     run_test(args)
