@@ -21,7 +21,7 @@ def record_demo(args):
     rospy.loginfo("Initialized, Moving Home")
     mover.go_home()
     mover.reset_gripper()
-    rospy.loginfo("Reached Home, waiting for start")
+    rospy.loginfo("Reached Home, waiting for input")
     
     start_pos = None
     start_q = None
@@ -43,6 +43,7 @@ def record_demo(args):
     trans_mode = True
     slow_mode = False
     demo = []
+    run_start = False
 
     while not rospy.is_shutdown():
 
@@ -60,14 +61,24 @@ def record_demo(args):
             mover.send_joint(q, 1.0)
             return demo
 
-        elif not record and start:
-            record = True
-            rospy.loginfo("Ready for joystick inputs")
-            # wait for start to turn false and user starts moving robot
-            while start or np.sum(axes):
-                axes, gripper, mode, slow, start = joystick.getInput()
-            rospy.loginfo("Recording...")
+        # elif not record and start:
+        #     record = True
+        #     rospy.loginfo("Ready for joystick inputs")
+        #     # wait for start to turn false and user starts moving robot
+        #     while start or np.sum(axes):
+        #         axes, gripper, mode, slow, start = joystick.getInput()
+        #     rospy.loginfo("Recording...")
+        #     start_time = time.time()
+                # Wait for human to start moving
+        while np.sum(np.abs(axes)) < 1e-3 and not run_start:
+            axes, gripper, mode, slow, start = joystick.getInput()
             start_time = time.time()
+            # assist_time = time.time()
+        
+        if not run_start:
+            rospy.loginfo("Start received")
+            run_start = True
+            record = True
         
         # actuate gripper
         gripper_ac = 0
@@ -154,7 +165,8 @@ def main():
     rospy.init_node("record_demo")
     parser = argparse.ArgumentParser()
     parser.add_argument("--name", type=str, help="save name")
-    parser.add_argument("--save-loc", type=str, default="./demos", help="save location for demo")
+    parser.add_argument("--save-loc", type=str, default="./data", help="save location for demo")
+    parser.add_argument("--user", type=str, default="user0", help="user number")
     parser.add_argument("--store", action="store_true", help="use to store demo or discard")
     args = parser.parse_args()
     
@@ -164,7 +176,7 @@ def main():
     demo = record_demo(args)
 
     if args.store:
-        savename  = args.save_loc + "/" + args.name + ".pkl"
+        savename  = args.save_loc + "/" + args.user + "/" + args.name + ".pkl"
         pickle.dump(demo, open(savename, "wb"))
         rospy.loginfo("Saved demo as: {}".format(savename))
         rospy.loginfo("Sample Datapoint : {}".format(demo[0]))

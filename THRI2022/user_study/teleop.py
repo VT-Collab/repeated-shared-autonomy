@@ -91,7 +91,7 @@ def main():
         qdot_h = mover.compute_limits(qdot_h)
         mover.send(qdot_h[0])
         rate.sleep()
-        rospy.loginfo(mover.joint2pose())
+        rospy.loginfo(mover.joint_states)
 
 if __name__ == "__main__":
     try:

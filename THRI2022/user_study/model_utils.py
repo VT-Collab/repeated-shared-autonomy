@@ -15,22 +15,24 @@ class Model(object):
     
     def __init__(self, args):
         self.args = args
-        if self.args.method == "ours":
+        if self.args.method == "sari":
             tasks = ["place", "pour", "stir"]
             cae_name = "sari/models/cae_" + "_".join(tasks[:self.args.n_intents])
             class_name = "sari/models/class_" + "_".join(tasks[:self.args.n_intents])
             self.model = SARI(classifier_name=class_name, cae_name=cae_name)
             rospy.loginfo("Loaded SARI model with {} intents".format(self.args.n_intents))
-        else:
+        elif self.args.method == "casa":
             self.models= []
-            for i in range(self.args.num_intents):
-                tmp = GCL()
+            actionSpaceSize = 9
+            stateSpaceSize = 18
+            for i in range(self.args.n_intents):
+                tmp = GCL(state_dim=stateSpaceSize, action_dim=actionSpaceSize)
                 tmp.load_model_filename(GCL_FILENAMES[i])
                 self.models.append(tmp)
             rospy.loginfo("Loaded CASA model")
     
     def get_params(self, data):
-        if self.args.method == "ours":
+        if self.args.method == "sari":
             # classifier input = q + curr_pos_awrap
             d = data["q"] + data["curr_pos_awrap"]
             alpha = self.model.classify(d)
@@ -39,11 +41,15 @@ class Model(object):
                 [data["curr_gripper_pos"], float(data["trans_mode"]), float(data["slow_mode"])]
             z = self.model.encoder(d)
             a_robot = self.model.decoder(z, d)
-        else:
-            d = data["curr_pos_awrap"][:6] + data["q"]
-            alphas = [self.model.cost_f(torch.FloatTensor(d)).detach().numpy()[0] for model in self.models]
+        elif self.args.method == "casa":
+            d = data["q"] + data["curr_pos_awrap"] + \
+                [data["curr_gripper_pos"], float(data["trans_mode"]), float(data["slow_mode"])]
+            alphas = [model.cost_f(torch.FloatTensor(d)).detach().numpy()[0] for model in self.models]
             alpha = min(0.6, np.exp(min(alphas)))
-            a_robot = self.models[alphas.index(min(alphas))].select_action(d)
+            alpha = max(0.0, alpha)
+            model_idx = alphas.index(min(alphas))
+            # only want xdot_h
+            a_robot = 0.5 * self.models[model_idx].select_action(d)[0:6]
         alpha = min(alpha, 0.6)
         return [alpha, a_robot]
 

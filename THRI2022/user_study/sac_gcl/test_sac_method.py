@@ -13,20 +13,22 @@ from glob import glob
 np.set_printoptions(precision=2, suppress=True)
 
 def convertAction(action, mover, slow_mode=True):
-    axes = action[0:3]
-    roll = action[3]
-    trans_mode = action[4]
-    gripper = action[5]
-    # slow_mode = action[6]
+    xdot_h = action[0:6]
+    flags = [0, 0, 0]
+    # axes = action[0:3]
+    # roll = action[3]
+    # trans_mode = action[4]
+    # gripper = action[5]
+    # # slow_mode = action[6]
 
-    gripper_ac = 0
-    scaling_trans = 0.2 - 0.1*slow_mode 
-    scaling_rot = 0.4 - 0.2*slow_mode 
+    # gripper_ac = 0
+    # scaling_trans = 0.2 - 0.1*slow_mode 
+    # scaling_rot = 0.4 - 0.2*slow_mode 
     
-    xdot_h = np.zeros(6)
-    xdot_h[:3] = scaling_trans * np.asarray(axes)
-    xdot_h[3] = scaling_rot * roll
-    return  5. * xdot_h        
+    # xdot_h = np.zeros(6)
+    # xdot_h[:3] = scaling_trans * np.asarray(axes)
+    # xdot_h[3] = scaling_rot * roll
+    return xdot_h, flags   
     # qdot_h = mover.xdot2qdot(xdot_h)
     # qdot_h = qdot_h.tolist()
     
@@ -39,7 +41,7 @@ def run_test(args):
     mover = TrajectoryClient()
     joystick = JoystickControl()
 
-    rate = rospy.Rate(1000)
+    rate = rospy.Rate(100)
     models = []
     filenames = ["intent0/sac_gcl_FINAL_intent0.pt", "intent1/sac_gcl_FINAL_intent1.pt","intent2/sac_gcl_FINAL_intent2.pt",]
     # for i in range(1, 40):
@@ -50,9 +52,11 @@ def run_test(args):
     # for i in range(args.models_to_load):
 
     # for i in range(len(filenames)):    
+    actionSpaceSize = 9
+    stateSpaceSize = 18
     for i in range(args.num_intents):
 
-        tmp = GCL()
+        tmp = GCL(state_dim=stateSpaceSize, action_dim=actionSpaceSize)
         tmp.load_model_filename(filenames[i])
         models.append(tmp) 
     
@@ -86,6 +90,9 @@ def run_test(args):
     
     assist = False
     assist_start = 1.0
+
+    last_assist_time = 0
+    assistInterval = 0.05
     
     while not rospy.is_shutdown():
 
@@ -138,7 +145,7 @@ def run_test(args):
             rot_vel = scaling_rot * R * axes.T
             xdot_h[:3] = trans_vel.T[:]
             xdot_h[3:] = rot_vel.T[:]
-            
+
         qdot_h = mover.xdot2qdot(xdot_h)
         qdot_h = qdot_h.tolist()[0]
 
@@ -165,7 +172,8 @@ def run_test(args):
 
             curr_pos_awrap = convert_to_6d(curr_pos)
 
-            d = curr_pos_awrap.tolist()[:6] + q
+            # d = curr_pos_awrap.tolist()[:6] + q
+            d = list(q) + list(curr_pos_awrap) + [curr_gripper_pos] + [trans_mode] + [slow_mode]
             alphas = [model.cost_f(torch.FloatTensor(d)).detach().numpy()[0] for model in models]
             # rospy.loginfo("d: {}".format(d))
             rospy.loginfo("confidence: {}".format(alphas))
@@ -176,21 +184,19 @@ def run_test(args):
             # alpha = min(alpha, 0.6)
             # alphas.append(alpha)
             # alpha = 0.4
-            a_robot = np.concatenate((a_robot, [1, 0, 1]))
-            a_robot = convertAction(a_robot, mover)
+            a_robot, flags = convertAction(a_robot, mover)
             # z = model.encoder(q + curr_pos_awrap.tolist() + [curr_gripper_pos] + [float(trans_mode), float(slow_mode)])
             # a_robot = model.decoder(z, q + curr_pos_awrap.tolist() + [curr_gripper_pos] + [float(trans_mode), float(slow_mode)])
-
+            # a_robot = np.clip(a_robot, 0.05, -0.05)
             a_robot = mover.xdot2qdot(a_robot)
-            qdot_r = 2. * a_robot
+            qdot_r = 1. * a_robot
             qdot_r = qdot_r.tolist()[0]
-
         if curr_time - assist_time >= assist_start and not assist:
             print("Assistance Started...")
             assist = True
-
         if assist:
-            alpha = 0.4
+        # if assist and curr_time - last_assist_time > assistInterval:
+            last_assist_time = curr_time
             qdot = (alpha * 1.0 * np.asarray(qdot_r) + (1-alpha) * np.asarray(qdot_h))
             qdot = np.clip(qdot, -0.3, 0.3)
             qdot = qdot.tolist()
@@ -198,7 +204,7 @@ def run_test(args):
             qdot = qdot_h
 
         mover.send(qdot)
-        rate.sleep()
+        # rate.sleep()
 
 def main():
     rospy.init_node("test_method_old")

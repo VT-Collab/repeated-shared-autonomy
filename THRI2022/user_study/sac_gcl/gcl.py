@@ -10,20 +10,21 @@ from model_gcl import CostNN
 
 
 class GCL(object):
-    def __init__(self, action_space=None, state_dim=12, action_dim=4):
+    def __init__(self, action_space=None, state_dim=12, action_dim=9):
         
         # hyperparameters
         self.gamma = 0.99
         self.tau = 0.005
         self.alpha = 0.2
         self.lr = 0.0003
-        self.hidden_size = 256
+        self.hidden_size = 128
         self.target_update_interval = 1
         self.state_dim = state_dim
         self.action_dim = action_dim
 
         if action_space is None:
-            action_space = {"high":np.array([1.0, 1.0, 1.0, 1.0]), "low":np.array([-1.0, -1.0, -1.0, -1.0])}
+            action_space = {"high":np.array([0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 1.0, 1.0, 1.0]), 
+                            "low":-np.array([0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 1.0, 1.0, 1.0])}
 
         # Cost
         self.cost_f = CostNN(self.state_dim, hidden_dim=128)
@@ -154,8 +155,9 @@ class GCL(object):
     def load_model_filename(self, name, algo="gcl"):
 
         print('[*] Loading from models/{}/{}'.format(algo, name))
-
-        checkpoint = torch.load("models/{}/{}".format(algo, name))
+        # hardcode checkpoint location
+        folder = "/home/ur10/ur10_ws/src/repeated-shared-autonomy/THRI2022/user_study/sac_gcl/"
+        checkpoint = torch.load(folder + "models/{}/{}".format(algo, name))
         self.cost_updates = checkpoint['cost_updates']
         self.policy_updates = checkpoint['policy_updates']
         self.cost_f.load_state_dict(checkpoint['cost'])

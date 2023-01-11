@@ -12,7 +12,7 @@ np.set_printoptions(precision=2, suppress=True)
 """ TODO
 - Add event logging
 """
-
+ 
 def run_test(args):
 
     mover = TrajectoryClient()
@@ -28,7 +28,7 @@ def run_test(args):
     rospy.loginfo("Initialized, Moving Home")
     mover.go_home()
     mover.reset_gripper()
-    rospy.loginfo("Reached Home, waiting for start")
+    rospy.loginfo("Reached Home, waiting for input")
 
     start_pos = None
     start_q = None
@@ -153,13 +153,18 @@ def run_test(args):
         data["curr_gripper_pos"] = curr_gripper_pos
 
         alpha, a_robot = model.get_params(data)
+        xdot_r = [0] * 6
+        if trans_mode: 
+            xdot_r[:3] = a_robot[:3]
+        elif not trans_mode:
+            xdot_r[3:] = a_robot[3:]
 
         data["alpha"] = alpha
         data["a_human"] = xdot_h.tolist()
-        data["a_robot"] = a_robot.tolist()
+        data["a_robot"] = xdot_r#.tolist()
 
-        a_robot = mover.xdot2qdot(a_robot)
-        qdot_r = 2. * a_robot
+        xdot_r = mover.xdot2qdot(xdot_r)
+        qdot_r = 2. * xdot_r
         qdot_r = qdot_r.tolist()[0]
         
         curr_time = time.time()
@@ -168,8 +173,11 @@ def run_test(args):
             assist = True
 
         if assist:
+            # sac method uses an interval between assistance times
+            # if args.method != "ours" :
+
             qdot = (alpha * 1.0 * np.asarray(qdot_r) + (1-alpha) * np.asarray(qdot_h))
-            qdot = np.clip(qdot, -0.3, 0.3)
+            # qdot = np.clip(qdot, -0.3, 0.3)
             qdot = qdot.tolist()
         else:
             qdot = qdot_h
@@ -192,9 +200,9 @@ def main():
     parser.add_argument("--user", type=int, help="User number for data collections (default: 0)", default=0)
     parser.add_argument("--filename", type=str, help="Savename for data (default:test)", default="test")
     parser.add_argument("--run-num", type=int, help="run number to save data (default:0)", default=0)
-    parser.add_argument("--method", type=str, help="method to use (default:ours)", default="ours")
+    parser.add_argument("--method", type=str, choices=["sari", "casa"], help="method to use (default:ours)", default="ours")
     args = parser.parse_args()
-    
+    rospy.loginfo(args)
     run_test(args)
 
 if __name__ == "__main__":

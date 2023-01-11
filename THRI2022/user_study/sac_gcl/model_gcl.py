@@ -17,8 +17,9 @@ class CostNN(nn.Module):
 
         self.ReLU = nn.LeakyReLU()
         self.linear1 = nn.Linear(num_inputs, hidden_dim)
-        self.linear2 = nn.Linear(hidden_dim, hidden_dim)
-        self.linear3 = nn.Linear(hidden_dim, 1)
+        self.linear2 = nn.Linear(hidden_dim, hidden_dim/2)
+        self.linear3 = nn.Linear(hidden_dim/2, hidden_dim/4)
+        self.linear4 = nn.Linear(hidden_dim/4, 1)
 
         self.apply(weights_init_)
 
@@ -26,4 +27,5 @@ class CostNN(nn.Module):
 
         h1 = self.ReLU(self.linear1(state))
         h2 = self.ReLU(self.linear2(h1))
-        return torch.tanh(self.linear3(h2))
+        h2 = self.ReLU(self.linear3(h2))
+        return torch.tanh(self.linear4(h2))

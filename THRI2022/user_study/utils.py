@@ -88,7 +88,7 @@ class JoystickControl(object):
         z1 = self.gamepad.get_axis(0)
         z2 = self.gamepad.get_axis(1)
         z3 = self.gamepad.get_axis(4)
-        z = [-z1, z2, -z3]
+        z = [z1, -z2, -z3]
         for idx in range(len(z)):
             if abs(z[idx]) < DEADBAND:
                 z[idx] = 0.0
@@ -100,9 +100,9 @@ class JoystickControl(object):
 
     def getAction(self, z):
         if self.toggle:
-            self.action = (0, 0, 0, STEP_SIZE_A * -z[1], STEP_SIZE_A * -z[0], STEP_SIZE_A * -z[2])
+            self.action = (0, 0, 0, STEP_SIZE_A * z[0], STEP_SIZE_A * z[1], STEP_SIZE_A * z[2])
         else:
-            self.action = (STEP_SIZE_L * -z[1], STEP_SIZE_L * -z[0], STEP_SIZE_L * -z[2], 0, 0, 0)
+            self.action = (STEP_SIZE_L * z[0], STEP_SIZE_L * z[1], STEP_SIZE_L * z[2], 0, 0, 0)
 
 
 class TrajectoryClient(object):
@@ -147,7 +147,7 @@ class TrajectoryClient(object):
         goal.force = 5.0
         # Sends the goal to the gripper.
         self.robotiq_client.send_goal(goal)
-
+    
         # store previous joint vels for moving avg
         self.qdots = deque(maxlen=MOVING_AVERAGE)
         for idx in range(MOVING_AVERAGE):
