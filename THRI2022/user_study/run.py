@@ -56,7 +56,7 @@ def run_test(args):
 
     run_start = False
     
-    folder = "./data/user" + str(args.user)
+    folder = "./user_data/user" + str(args.user)
     abs_path = os.path.abspath(folder)
     if not os.path.exists(abs_path):
         os.makedirs(abs_path)

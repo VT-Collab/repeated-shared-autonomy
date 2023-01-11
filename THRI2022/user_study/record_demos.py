@@ -165,7 +165,7 @@ def main():
     rospy.init_node("record_demo")
     parser = argparse.ArgumentParser()
     parser.add_argument("--name", type=str, help="save name")
-    parser.add_argument("--save-loc", type=str, default="./data", help="save location for demo")
+    parser.add_argument("--save-loc", type=str, default="./user_data", help="save location for demo")
     parser.add_argument("--user", type=str, default="user0", help="user number")
     parser.add_argument("--store", action="store_true", help="use to store demo or discard")
     args = parser.parse_args()
