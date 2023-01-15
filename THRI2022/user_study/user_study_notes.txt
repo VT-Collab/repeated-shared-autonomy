@@ -9,6 +9,7 @@ BCA
 CAB
 ACB
 BAC
+CBA
 
 TO RUN
 Method A
