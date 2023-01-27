@@ -16,4 +16,4 @@ events.out.tfevents.*
 # some specific files
 plot_data.pkl
 waypoints.py
-
+pk.json

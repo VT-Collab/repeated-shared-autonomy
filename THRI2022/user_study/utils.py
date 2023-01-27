@@ -7,7 +7,7 @@ import pickle
 from urdf_parser_py.urdf import URDF
 from pykdl_utils.kdl_kinematics import KDLKinematics
 from collections import deque
-from std_msgs.msg import Float64MultiArray, String
+from std_msgs.msg import Float64MultiArray, Float32MultiArray, String
 
 from robotiq_2f_gripper_msgs.msg import (
     CommandRobotiqGripperFeedback, 
@@ -48,6 +48,15 @@ from geometry_msgs.msg import(
 )
 
 from waypoints import HOME
+
+# remote teleop imports
+import firebase_admin
+from firebase_admin import db, credentials
+
+cred = credentials.Certificate('pk.json')
+firebase_admin.initialize_app(cred, {
+    'databaseURL': 'https://rsa-remote-op-default-rtdb.firebaseio.com/'})
+ref = db.reference('coords/')
 
 """
 TODO
@@ -104,6 +113,31 @@ class JoystickControl(object):
         else:
             self.action = (STEP_SIZE_L * z[0], STEP_SIZE_L * z[1], STEP_SIZE_L * z[2], 0, 0, 0)
 
+class RemoteClient(object):
+
+    def __init__(self):
+        self.firebase_sub = rospy.Subscriber('/remote_cmd', Float32MultiArray, self.firebase_cb)
+        self.axes = []
+        self.mode = 0
+        self.slow = 0
+        self.grip = 0
+        self.start = 0
+        self.assist = 0
+    
+    def firebase_cb(self, msg):
+        packet = list(msg.data)
+        self.axes = packet[:6]
+        self.mode = packet[6]
+        self.grip = packet[7]
+        self.slow = packet[8]
+        self.start = packet[9]
+        self.assist = packet[10]
+    
+    def getInput(self):
+        return self.axes, self.grip, self.mode, self.slow, self.start, self.assist
+
+    def print_msg(self):
+        print(self.axes, self.grip, self.mode, self.slow, self.start, self.assist)
 
 class TrajectoryClient(object):
 
@@ -349,3 +383,13 @@ def convert_to_6d(pos):
     pos_awrap[:3] = pos[:3]
     pos_awrap[3:] = get_rotation_mat(pos[3:]).flatten('F')[0,:6]
     return pos_awrap
+
+# def get_remote_inputs():
+#     inputs = ref.get()
+#     axes = np.array([inputs["x"], inputs["y"], inputs["z"], inputs["rx"], inputs["ry"], inputs["rz"]]) * 0.5
+#     grip = inputs["grip"]
+#     # mode = inputs["mode"]
+#     start = inputs["stop"]
+#     slow = 0
+#     mode = 0
+#     return axes, grip, mode, slow, start
