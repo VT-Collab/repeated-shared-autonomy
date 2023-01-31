@@ -76,7 +76,6 @@ for user_num, user in enumerate(user_folders):
                                 confidence += item["alpha"]
                             mean_confidence_unknown[method][user_num, int(demo_num), 0] = confidence / len(data)
                             
-
                 
                 elif task_no == 1: 
                     if task == "soup":
