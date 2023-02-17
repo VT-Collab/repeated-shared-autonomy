@@ -1,7 +1,5 @@
 # SARI: Sharing Autonomy across Repeated Interactions
 
-[![Conference](https://img.shields.io/badge/NeurIPS-Accepted-success)](https://sites.google.com/view/cail/) [![Arxiv](http://img.shields.io/badge/arxiv-2110.14754-B31B1B.svg)](https://arxiv.org/abs/2110.14754)
-
 Code repository for the IROS 2021 paper ([Learning to share autonomy across repeated interaction](https://ieeexplore.ieee.org/abstract/document/9636748)) and THRI 2023 submission ([SARI: Shared Autonomy across Repeated Interaction](https://arxiv.org/abs/2205.09795)).
 
 
