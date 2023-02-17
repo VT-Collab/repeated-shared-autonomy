@@ -1,0 +1,32 @@
+Methods
+A - Noassist
+B - SARI
+C - CASA
+
+Pattern for counterbalancing
+ABC
+BCA
+CAB
+ACB
+BAC
+CBA
+
+TO RUN
+Method A
+python record_demos.py --store --user user<user_no> --name noassist_<task>_<run_num>
+
+Method B
+python run.py --method sari --n-intents <n_intents> --user <user_no> --filename sari_<task>_<run_num>
+
+Method C
+python run.py --method casa --n-intents <n_intents> --user <user_no> --filename casa_<task>_<run_num>
+
+TO RUN REMOTE
+Method A
+python record_demos_remote.py --store --user user<user_no> --name noassist_<task>_<run_num>
+
+Method B
+python run_remote.py --method sari --n-intents <n_intents> --user <user_no> --filename sari_<task>_<run_num>
+
+Method C
+python run_remote.py --method casa --n-intents <n_intents> --user <user_no> --filename casa_<task>_<run_num>
