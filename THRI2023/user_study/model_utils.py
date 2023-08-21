@@ -11,6 +11,11 @@ import rospy
 GCL_FILENAMES = ["intent0/sac_gcl_FINAL_intent0.pt", "intent1/sac_gcl_FINAL_intent1.pt","intent2/sac_gcl_FINAL_intent2.pt",]
 
 
+"""
+Top level class for sari and casa models.
+SARI loads a discriminator and autoencoder model for the given task 
+CASA loads the models trained using guided cost learning
+"""
 class Model(object):
     
     def __init__(self, args):

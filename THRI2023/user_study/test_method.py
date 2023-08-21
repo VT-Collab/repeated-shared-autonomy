@@ -11,14 +11,17 @@ np.set_printoptions(precision=2, suppress=True)
 
 def run_test(args):
 
-    mover = TrajectoryClient()
-    joystick = JoystickControl()
+    mover = TrajectoryClient() # ROS based robot controller
+    joystick = JoystickControl() # joystick inputs
 
     rate = rospy.Rate(1000)
 
     cae_model = 'models/' + args.cae_name
     class_model = 'models/' + args.class_name
-    model = Model(class_model, cae_model)
+    # class containes both models:
+    # class_model is the discriminator
+    # cae_model is the autoencoder
+    model = Model(class_model, cae_model) 
 
     rospy.loginfo("Initialized, Moving Home")
     mover.go_home()
@@ -129,7 +132,7 @@ def run_test(args):
             curr_pos_awrap = convert_to_6d(curr_pos)
 
             d = q + curr_pos_awrap.tolist()
-            alpha = model.classify(d)
+            alpha = model.classify(d) # get confidence from discriminator
 
             rospy.loginfo("confidence: {}".format(alpha))
             alpha = min(alpha, 0.6)

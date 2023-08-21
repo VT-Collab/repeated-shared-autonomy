@@ -344,6 +344,8 @@ class TrajectoryClient(object):
         Robotiq.goto(self.robotiq_client, pos=pos, speed=speed, force=force, block=True)
         return self.robotiq_client.get_result()
 
+# deformation procedure for our trajectories. 
+# See https://arxiv.org/abs/1710.09871 for more info
 def deform(xi, start, length, tau):
     # length += np.random.choice(np.arange(30, length))
     xi1 = np.asarray(xi).copy()
